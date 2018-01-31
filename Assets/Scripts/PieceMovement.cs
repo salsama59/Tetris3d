@@ -9,7 +9,9 @@ public class PieceMovement : MonoBehaviour {
 
     // Use this for initialization
     void Start () {
+		
         gameObJectRigidBody =  this.gameObject.GetComponent<Rigidbody>();
+		
 	}
 	
 	// Update is called once per frame
