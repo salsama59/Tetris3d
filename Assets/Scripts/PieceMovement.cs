@@ -5,37 +5,72 @@ using UnityEngine;
 public class PieceMovement : MonoBehaviour {
 
     Rigidbody gameObJectRigidBody;
+    Transform gameObjectTransform;
+    public GameObject field;
+    private Vector3 minRange;
+    private Vector3 maxRange;
+
     public float speed;
 
     // Use this for initialization
     void Start () {
-		
-        gameObJectRigidBody =  this.gameObject.GetComponent<Rigidbody>();
-		
-	}
+
+        this.gameObjectTransform = this.gameObject.GetComponent<Transform>();
+        this.gameObJectRigidBody = this.gameObject.GetComponent<Rigidbody>();
+
+        this.CalculateFieldRanges();
+
+    }
 	
 	// Update is called once per frame
 	void FixedUpdate () {
 
-        float horiZontalMove = Input.GetAxis("Horizontal");
         float verticalMove = Input.GetAxis("Vertical");
 
         Vector3 newGameObjectVelocity = new Vector3();
 
-        if(Input.GetKey(KeyCode.LeftArrow) || Input.GetKey(KeyCode.RightArrow))
+        Vector3 newPosition = new Vector3();
+
+        if (Input.GetKeyDown(KeyCode.RightArrow))
         {
-            newGameObjectVelocity = new Vector3(horiZontalMove * speed, gameObJectRigidBody.velocity.y, gameObJectRigidBody.velocity.z);
+            newPosition = this.gameObjectTransform.position + Vector3.right;
+            this.gameObjectTransform.position = this.ClampObjectPosition(newPosition);
         }
-        else if(Input.GetKey(KeyCode.DownArrow))
+        else if(Input.GetKeyDown(KeyCode.LeftArrow))
         {
-            newGameObjectVelocity = new Vector3(gameObJectRigidBody.velocity.x, gameObJectRigidBody.velocity.y, verticalMove * speed);
+            newPosition = this.gameObjectTransform.position + Vector3.left;
+            this.gameObjectTransform.position = this.ClampObjectPosition(newPosition);
+        }
+
+        if (Input.GetKey(KeyCode.DownArrow))
+        {
+            newGameObjectVelocity = new Vector3(this.gameObJectRigidBody.velocity.x, this.gameObJectRigidBody.velocity.y, verticalMove * this.speed);
         }
         else
         {
-            newGameObjectVelocity = new Vector3(gameObJectRigidBody.velocity.x, gameObJectRigidBody.velocity.y, -0.5f * speed);
+            newGameObjectVelocity = new Vector3(this.gameObJectRigidBody.velocity.x, this.gameObJectRigidBody.velocity.y, -0.5f * this.speed);
         }
 
-        gameObJectRigidBody.velocity = newGameObjectVelocity;
+        this.gameObJectRigidBody.velocity = newGameObjectVelocity;
 
+    }
+
+    void CalculateFieldRanges()
+    {
+        Renderer fieldRenderer = this.field.GetComponent<Renderer>();
+        this.maxRange = fieldRenderer.bounds.size * 0.5f;
+        this.minRange = new Vector3(this.maxRange.x * -1, this.maxRange.y * -1, this.maxRange.z * -1);
+        Debug.Log("Max range = " + this.maxRange);
+        Debug.Log("Min range = " + this.minRange);
+    }
+
+    private Vector3 ClampObjectPosition(Vector3 position)
+    {
+
+        return new Vector3(
+            Mathf.Clamp(position.x, minRange.x, maxRange.x),
+            Mathf.Clamp(position.y, minRange.y, maxRange.y),
+            Mathf.Clamp(position.z, minRange.z, maxRange.z)
+            );
     }
 }
