@@ -61,9 +61,17 @@ public class PieceMovement : MonoBehaviour {
 
     void CalculateFieldRanges()
     {
-        Renderer fieldRenderer = this.field.GetComponent<Renderer>();
-        this.maxRange = fieldRenderer.bounds.size * 0.5f - new Vector3(1, 0, 0);
-        this.minRange = new Vector3(this.maxRange.x * -1, this.maxRange.y * -1, this.maxRange.z * -1) - new Vector3(1, 0, 0);
+        MeshFilter fieldRenderer = this.field.GetComponent<MeshFilter>();
+        Vector3 objectHalfSize = fieldRenderer.mesh.bounds.size * 0.5f;
+        Vector3 objectScale = this.field.transform.localScale;
+
+        this.maxRange = new Vector3(
+            objectHalfSize.x * objectScale.x - 0.5f,
+            objectHalfSize.y * objectScale.y - 0.5f,
+            objectHalfSize.z * objectScale.z - 0.5f
+            );
+
+        this.minRange = new Vector3(this.maxRange.x * -1, this.maxRange.y * -1, this.maxRange.z * -1);
     }
 
     private Vector3 ClampObjectPosition(Vector3 position)
@@ -71,7 +79,7 @@ public class PieceMovement : MonoBehaviour {
 
         return new Vector3(
             Mathf.Clamp(position.x, minRange.x, maxRange.x),
-            Mathf.Clamp(position.y, -1.5f, -1.5f),
+            Mathf.Clamp(position.y, position.y, position.y),
             Mathf.Clamp(position.z, minRange.z, maxRange.z)
             );
     }
