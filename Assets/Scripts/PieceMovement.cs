@@ -45,6 +45,11 @@ public class PieceMovement : MonoBehaviour {
                 this.gameObjectTransform.position = this.ClampObjectPosition(newPosition);
             }
 
+            if(Input.GetKeyDown(KeyCode.Space))
+            {
+                this.gameObjectTransform.rotation *= Quaternion.Euler(0f, 90f, 0f);
+            }
+
             if (Input.GetKey(KeyCode.DownArrow))
             {
                 newGameObjectVelocity = new Vector3(this.gameObJectRigidBody.velocity.x, this.gameObJectRigidBody.velocity.y, verticalMove * this.speed);
@@ -80,7 +85,7 @@ public class PieceMovement : MonoBehaviour {
         return new Vector3(
             Mathf.Clamp(position.x, minRange.x, maxRange.x),
             Mathf.Clamp(position.y, position.y, position.y),
-            Mathf.Clamp(position.z, minRange.z, maxRange.z)
+            Mathf.Clamp(position.z, position.z, position.z)
             );
     }
 
