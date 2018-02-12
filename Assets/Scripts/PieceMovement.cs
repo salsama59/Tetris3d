@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class PieceMovement : MonoBehaviour {
 
-    //Rigidbody gameObJectRigidBody;
+    Rigidbody gameObJectRigidBody;
     Transform gameObjectTransform;
     public GameObject field;
     private Vector3 minRange;
@@ -17,7 +17,7 @@ public class PieceMovement : MonoBehaviour {
 
         IsMoving = true;
         this.gameObjectTransform = this.gameObject.GetComponent<Transform>();
-        //this.gameObJectRigidBody = this.gameObject.GetComponent<Rigidbody>();
+        this.gameObJectRigidBody = this.gameObject.GetComponent<Rigidbody>();
 
         this.CalculateFieldRanges();
 
@@ -52,14 +52,18 @@ public class PieceMovement : MonoBehaviour {
 
             if (Input.GetKey(KeyCode.DownArrow))
             {
-                newGameObjectVelocity.z = verticalMove * this.speed * Time.deltaTime;
-                this.gameObjectTransform.Translate(newGameObjectVelocity, Space.Self);
+                newGameObjectVelocity = new Vector3(this.gameObJectRigidBody.velocity.x, this.gameObJectRigidBody.velocity.y, verticalMove * this.speed);
+                //newGameObjectVelocity.z = verticalMove * this.speed * Time.deltaTime;
+                //this.gameObjectTransform.Translate(newGameObjectVelocity, Space.Self);
             }
             else
             {
-                newGameObjectVelocity.z = -0.5f * this.speed * Time.deltaTime;
-                this.gameObjectTransform.Translate(newGameObjectVelocity, Space.Self);
+                newGameObjectVelocity = new Vector3(this.gameObJectRigidBody.velocity.x, this.gameObJectRigidBody.velocity.y, -0.5f * this.speed);
+                //newGameObjectVelocity.z = -0.5f * this.speed * Time.deltaTime;
+                //this.gameObjectTransform.Translate(newGameObjectVelocity, Space.Self);
             }
+
+            this.gameObJectRigidBody.velocity = newGameObjectVelocity;
         }
 
     }
