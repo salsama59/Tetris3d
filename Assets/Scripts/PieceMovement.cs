@@ -48,6 +48,20 @@ public class PieceMovement : MonoBehaviour {
             if(Input.GetKeyDown(KeyCode.Space))
             {
                 this.gameObjectTransform.rotation *= Quaternion.Euler(0f, 90f, 0f);
+
+                if(this.gameObjectTransform.rotation.eulerAngles.y == 360f)
+                {
+                    this.gameObjectTransform.rotation = Quaternion.Euler(0f, 0f, 0f);
+                }
+            }
+            else if(Input.GetKeyDown(KeyCode.LeftAlt))
+            {
+                this.gameObjectTransform.rotation *= Quaternion.Euler(0f, -90f, 0f);
+
+                if (this.gameObjectTransform.rotation.eulerAngles.y == -360f)
+                {
+                    this.gameObjectTransform.rotation = Quaternion.Euler(0f, 0f, 0f);
+                }
             }
 
             if (Input.GetKey(KeyCode.DownArrow))

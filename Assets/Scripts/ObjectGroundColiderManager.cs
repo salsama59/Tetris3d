@@ -21,10 +21,6 @@ public class ObjectGroundColiderManager : MonoBehaviour
             if (pieceMovementScript.IsMoving && contactFromBelow)
             {
 
-                Vector3 objectColligingCurrentRotation = other.collider.gameObject.transform.eulerAngles;
-
-                Debug.Log("So " + other.gameObject.name + " rotation was" + objectColligingCurrentRotation);
-
                 Debug.Log("So pieceMovement variable Ismoving was : " + pieceMovementScript.IsMoving);
                 pieceMovementScript.IsMoving = false;
 
@@ -32,14 +28,13 @@ public class ObjectGroundColiderManager : MonoBehaviour
 
                 Rigidbody objectColidingRigidBody = other.collider.GetComponent<Rigidbody>();
                 
-                Debug.Log("So " + other.gameObject.name + " rotation is now" + objectColligingCurrentRotation);
                 Debug.Log("velocity was : " + objectColidingRigidBody.velocity);
                 objectColidingRigidBody.velocity = new Vector3(0, 0, 0);
                 Debug.Log("velocity is now : " + objectColidingRigidBody.velocity);
 
-                other.collider.gameObject.transform.eulerAngles = objectColligingCurrentRotation;
-
                 objectColidingRigidBody.isKinematic = true;
+
+                this.CorrectObjectAngles(other.collider.gameObject);
 
             }
 
@@ -54,6 +49,54 @@ public class ObjectGroundColiderManager : MonoBehaviour
 
         gameManager.IsReadyToSpawnObject = true;
 
+    }
+
+    private void CorrectObjectAngles(GameObject gameObject)
+    {
+
+        float xAngle = CorrectObjectAngleValue(gameObject.transform.rotation.eulerAngles.x);
+        Debug.Log("angle de rotation y actuel : " + gameObject.transform.rotation.eulerAngles.y);
+        float yAngle = CorrectObjectAngleValue(gameObject.transform.rotation.eulerAngles.y);
+        Debug.Log("angle de rotation y après correction : " + yAngle);
+        float zAngle = CorrectObjectAngleValue(gameObject.transform.rotation.eulerAngles.z);
+
+        gameObject.transform.localEulerAngles = new Vector3 (xAngle, yAngle, zAngle);
+
+    }
+
+    private float CorrectObjectAngleValue(float eulerAngle)
+    {
+        float roundedValue = Mathf.Round(eulerAngle);
+        bool isNegative = false;
+
+        if(roundedValue < 0)
+        {
+            roundedValue *= -1;
+            isNegative = true;
+        }
+
+        if(roundedValue <= 360f && roundedValue > 270f)
+        {
+            roundedValue = 360f;
+        }
+        else if(roundedValue <= 270f && roundedValue > 180f)
+        {
+            roundedValue = 270f;
+        }
+        else if(roundedValue <= 180f && roundedValue > 90f)
+        {
+            roundedValue = 180f;
+        }
+        else if (roundedValue <= 90f && roundedValue > 45f)
+        {
+            roundedValue = 90f;
+        }
+        else if(roundedValue <= 45f && roundedValue >= 0f)
+        {
+            roundedValue = 0f;
+        }
+
+        return isNegative ? roundedValue * -1 : roundedValue;
     }
 
     private bool IsContactFromBelow(Collision otherCollision)
