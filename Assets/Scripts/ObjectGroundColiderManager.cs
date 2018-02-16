@@ -36,6 +36,8 @@ public class ObjectGroundColiderManager : MonoBehaviour
 
                 this.CorrectObjectAngles(other.collider.gameObject);
 
+                this.CorrectObjectPosition(pieceMovementScript, other.collider.gameObject);
+
             }
 
         }
@@ -48,6 +50,13 @@ public class ObjectGroundColiderManager : MonoBehaviour
         GameManager gameManager = gameManagerObject.GetComponent<GameManager>();
 
         gameManager.IsReadyToSpawnObject = true;
+
+    }
+
+    private void CorrectObjectPosition(PieceMovement pieceMovementScript, GameObject objectColliding)
+    {
+
+        objectColliding.transform.position = pieceMovementScript.CurrentPosition;
 
     }
 

@@ -11,6 +11,8 @@ public class PieceMovement : MonoBehaviour {
     private Vector3 maxRange;
     private bool isMoving;
     public float speed;
+    private Vector3 currentPosition;
+    private Quaternion currentRotation;
 
     // Use this for initialization
     void Start () {
@@ -22,9 +24,15 @@ public class PieceMovement : MonoBehaviour {
         this.CalculateFieldRanges();
 
     }
-	
-	// Update is called once per frame
-	void FixedUpdate () {
+
+    private void LateUpdate()
+    {
+        currentPosition = this.transform.position;
+        currentRotation = this.transform.rotation;
+    }
+
+    // Update is called once per frame
+    void FixedUpdate () {
         
         if (IsMoving)
         {
@@ -120,4 +128,29 @@ public class PieceMovement : MonoBehaviour {
         }
     }
 
+    public Vector3 CurrentPosition
+    {
+        get
+        {
+            return currentPosition;
+        }
+
+        set
+        {
+            currentPosition = value;
+        }
+    }
+
+    public Quaternion CurrentRotation
+    {
+        get
+        {
+            return currentRotation;
+        }
+
+        set
+        {
+            currentRotation = value;
+        }
+    }
 }
