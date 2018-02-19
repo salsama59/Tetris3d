@@ -1,5 +1,4 @@
 *.collabignore
-/ProjectSettings
 /obj
 /Library
 /Temp
