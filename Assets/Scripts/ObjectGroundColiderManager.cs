@@ -6,40 +6,20 @@ public class ObjectGroundColiderManager : MonoBehaviour
 {
     private void OnCollisionEnter(Collision other)
     {
-        Debug.Log("now the piece : " + other.collider.name + " is colliding");
-        Debug.Log("tag is : " + other.collider.tag);
 
         if (other.collider.CompareTag("Piece"))
         {
-            
             PieceMovement pieceMovementScript = other.collider.GetComponent<PieceMovement>();
-
             bool contactFromBelow = this.IsContactFromBelow(other);
-
-            Debug.Log("piece is moving : " + pieceMovementScript.IsMoving);
-            Debug.Log(this.gameObject.name + " is below " + other.gameObject.name + " : " + contactFromBelow);
             if (pieceMovementScript.IsMoving && contactFromBelow)
             {
-
-                Debug.Log("So pieceMovement variable Ismoving was : " + pieceMovementScript.IsMoving);
                 pieceMovementScript.IsMoving = false;
-
-                Debug.Log("So pieceMovement variable Ismoving is now : " + pieceMovementScript.IsMoving);
-
                 Rigidbody objectColidingRigidBody = other.collider.GetComponent<Rigidbody>();
-                
-                Debug.Log("velocity was : " + objectColidingRigidBody.velocity);
                 objectColidingRigidBody.velocity = new Vector3(0, 0, 0);
-                Debug.Log("velocity is now : " + objectColidingRigidBody.velocity);
-
                 objectColidingRigidBody.isKinematic = true;
-
                 this.CorrectObjectAngles(other.collider.gameObject);
-
                 this.CorrectObjectPosition(pieceMovementScript, other.collider.gameObject);
-
             }
-
         }
         else if(other.collider.CompareTag("Ground"))
         {
@@ -55,20 +35,32 @@ public class ObjectGroundColiderManager : MonoBehaviour
 
     private void CorrectObjectPosition(PieceMovement pieceMovementScript, GameObject objectColliding)
     {
+        GameObject gameManagerObject = GameObject.FindGameObjectWithTag("GameManager");
+        GameManager gameManager = gameManagerObject.GetComponent<GameManager>();
 
-        objectColliding.transform.position = pieceMovementScript.CurrentPosition;
+        Vector3[,] positionMap = gameManager.GameMap;
 
+        for (int i = 0; i < positionMap.GetLength(0); i++)
+        {
+            for(int j = 0; j  < positionMap.GetLength(1); j++)
+            {
+                if(objectColliding.transform.position.x < j + 1 && objectColliding.transform.position.x > j)
+                {
+                    if(objectColliding.transform.position.z < i + 1 && objectColliding.transform.position.z > i)
+                    {
+                        objectColliding.transform.position = positionMap[i, j];
+                    }
+                }
+            }
+        }
     }
 
     private void CorrectObjectAngles(GameObject gameObject)
     {
 
         float xAngle = CorrectObjectAngleValue(gameObject.transform.rotation.eulerAngles.x);
-        Debug.Log("angle de rotation y actuel : " + gameObject.transform.rotation.eulerAngles.y);
         float yAngle = CorrectObjectAngleValue(gameObject.transform.rotation.eulerAngles.y);
-        Debug.Log("angle de rotation y après correction : " + yAngle);
         float zAngle = CorrectObjectAngleValue(gameObject.transform.rotation.eulerAngles.z);
-
         gameObject.transform.localEulerAngles = new Vector3 (xAngle, yAngle, zAngle);
 
     }
@@ -116,23 +108,16 @@ public class ObjectGroundColiderManager : MonoBehaviour
         Vector3 objectHalfSize = this.GetObjectHalfsize(otherCollision.gameObject);
         Vector3 objectScale = otherCollision.gameObject.transform.localScale;
 
-        Debug.Log(otherCollision.gameObject.name + " size is : " + this.GetObjectSize(otherCollision.gameObject));
-
         float objectMinSidePosition = otherCollision.gameObject.transform.position.x - (objectHalfSize.x * objectScale.x);
         float objectMaxSidePosition = otherCollision.gameObject.transform.position.x + (objectHalfSize.x * objectScale.x);
 
-        Debug.Log("there is : " + otherCollision.contacts.Length + " colision contact point");
-
-        Debug.Log("this is the collisions positions : ");
 
         foreach (ContactPoint contact in otherCollision.contacts)
         {
-            Debug.Log(contact.point);
             if (objectMinSidePosition < contact.point.x && objectMaxSidePosition > contact.point.x && contact.point.z > this.gameObject.transform.position.z)
             {
                 return true;
             }
-            
         }
 
         return below;
