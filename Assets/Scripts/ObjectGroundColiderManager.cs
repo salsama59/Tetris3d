@@ -7,8 +7,9 @@ public class ObjectGroundColiderManager : MonoBehaviour
     private void OnCollisionEnter(Collision other)
     {
 
-        if (other.collider.CompareTag("Piece"))
+        if (other.collider.CompareTag("Piece") && this.IsCollisionAccepted())
         {
+           
             PieceMovement pieceMovementScript = other.collider.GetComponent<PieceMovement>();
             bool contactFromBelow = this.IsContactFromBelow(other);
             if (pieceMovementScript.IsMoving && contactFromBelow)
@@ -18,27 +19,32 @@ public class ObjectGroundColiderManager : MonoBehaviour
                 objectColidingRigidBody.velocity = new Vector3(0, 0, 0);
                 objectColidingRigidBody.isKinematic = true;
                 this.CorrectObjectAngles(other.collider.gameObject);
-                this.CorrectObjectPosition(pieceMovementScript, other.collider.gameObject);
+                this.CorrectObjectPosition(other.collider.gameObject);
             }
         }
-        else if(other.collider.CompareTag("Ground"))
+        else
         {
             return;
         }
-
+        
         GameObject gameManagerObject = GameObject.FindGameObjectWithTag("GameManager");
         GameManager gameManager = gameManagerObject.GetComponent<GameManager>();
-
+        gameManager.GameMap = this.UpdateOccupiedSpace(other.collider.gameObject, gameManager.GameMap);
         gameManager.IsReadyToSpawnObject = true;
 
     }
 
-    private void CorrectObjectPosition(PieceMovement pieceMovementScript, GameObject objectColliding)
+    private bool IsCollisionAccepted()
+    {
+        return !this.gameObject.CompareTag("Background");
+    }
+
+    private void CorrectObjectPosition(GameObject objectColliding)
     {
         GameObject gameManagerObject = GameObject.FindGameObjectWithTag("GameManager");
         GameManager gameManager = gameManagerObject.GetComponent<GameManager>();
 
-        Vector3[,] positionMap = gameManager.GameMap;
+        PositionMapElement[,] positionMap = gameManager.GameMap;
 
         for (int i = 0; i < positionMap.GetLength(0); i++)
         {
@@ -48,11 +54,24 @@ public class ObjectGroundColiderManager : MonoBehaviour
                 {
                     if(objectColliding.transform.position.z < i + 1 && objectColliding.transform.position.z > i)
                     {
-                        objectColliding.transform.position = positionMap[i, j];
+                        objectColliding.transform.position = positionMap[i, j].Position;
                     }
                 }
             }
         }
+    }
+
+    private PositionMapElement[,] UpdateOccupiedSpace(GameObject parentObject, PositionMapElement[,] positionMap)
+    {
+        Transform[] childrenTransform = parentObject.GetComponentsInChildren<Transform>();
+        foreach (Transform transform in childrenTransform)
+        {
+            int linePosition = (int)(transform.position.z - 0.5f);
+            int columnPosition = (int)(transform.position.x - 0.5f);
+            positionMap[linePosition, columnPosition].IsOccupied = true;
+            transform.gameObject.layer = LayerMask.NameToLayer("DestroyablePiece");
+        }
+        return positionMap;
     }
 
     private void CorrectObjectAngles(GameObject gameObject)

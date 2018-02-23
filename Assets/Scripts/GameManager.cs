@@ -11,7 +11,7 @@ public class GameManager : MonoBehaviour {
     private bool isReadyToSpawnObject;
     public GameObject horizontalLine;
     public GameObject verticalLine;
-    private Vector3[,] map;
+    private PositionMapElement[,] map;
     private GameObject gameField;
 
     private void Start()
@@ -35,9 +35,6 @@ public class GameManager : MonoBehaviour {
     IEnumerator SpawnObjects()
     {
         yield return new WaitForSeconds(startWait);
-
-       
-            
         GameObject piece = objects[Random.Range(0, objects.Length)];
         PieceMovement pieceMovementScript = piece.GetComponent<PieceMovement>();
 
@@ -47,7 +44,6 @@ public class GameManager : MonoBehaviour {
         Quaternion spawnRotation = Quaternion.identity;
         Instantiate(piece, spawnPosition, spawnRotation);
         yield return new WaitForSeconds(spawnWait);
-
     }
 
     private void BuildFieldGrid()
@@ -102,7 +98,7 @@ public class GameManager : MonoBehaviour {
         {
             for (int l = 0; l < Mathf.RoundToInt(maximumValues.x); l++)
             {
-                GameMap[k, l] = new Vector3(l + 0.5f, 0.5f, k + 0.5f);
+                GameMap[k, l] = new PositionMapElement (new Vector3(l + 0.5f, 0.5f, k + 0.5f), false);
             }
         }
     }
@@ -127,7 +123,7 @@ public class GameManager : MonoBehaviour {
     {
         GameObject field = GameObject.FindGameObjectWithTag("Background");
         Vector3 fieldRange = GetFieldMaxRange(field);
-        GameMap = new Vector3[Mathf.RoundToInt(fieldRange.z), Mathf.RoundToInt(fieldRange.x)];
+        GameMap = new PositionMapElement[Mathf.RoundToInt(fieldRange.z), Mathf.RoundToInt(fieldRange.x)];
     }
 
     public bool IsReadyToSpawnObject
@@ -143,7 +139,7 @@ public class GameManager : MonoBehaviour {
         }
     }
 
-    public Vector3[,] GameMap
+    public PositionMapElement[,] GameMap
     {
         get
         {

@@ -39,22 +39,34 @@ public class PieceMovement : MonoBehaviour {
 
             if (Input.GetKey(KeyCode.RightArrow))
             {
-                newPosition = this.gameObjectTransform.position + Vector3.right;
-                this.MoveObjectToNewPosition(newPosition);
+                if(!this.IsMoveForbiden(KeyCode.RightArrow))
+                {
+                    newPosition = this.gameObjectTransform.position + Vector3.right;
+                    this.MoveObjectToNewPosition(newPosition);
+                }
             }
             else if (Input.GetKey(KeyCode.LeftArrow))
             {
-                newPosition = this.gameObjectTransform.position + Vector3.left;
-                this.MoveObjectToNewPosition(newPosition);
+                if (!this.IsMoveForbiden(KeyCode.LeftArrow))
+                {
+                    newPosition = this.gameObjectTransform.position + Vector3.left;
+                    this.MoveObjectToNewPosition(newPosition);
+                }
             }
 
             if (Input.GetKeyDown(KeyCode.Space))
             {
-                RotateObject(true);
+                if(!this.IsRotateForbiden())
+                {
+                    RotateObject(true);
+                }
             }
             else if(Input.GetKeyDown(KeyCode.LeftAlt))
             {
-                this.RotateObject(false);
+                if (!this.IsRotateForbiden())
+                {
+                    this.RotateObject(false);
+                }
             }
 
             if (Input.GetKey(KeyCode.DownArrow))
@@ -101,7 +113,7 @@ public class PieceMovement : MonoBehaviour {
         if (elapsedTime >= targetElapsedtime)
         {
             elapsedTime = 0;
-            this.gameObjectTransform.position = this.ClampObjectPosition(Vector3.Lerp(this.gameObjectTransform.position, newPosition, timeToMoveToward));
+            this.gameObjectTransform.position = Vector3.Lerp(this.gameObjectTransform.position, newPosition, timeToMoveToward);
         }
     }
 
@@ -148,14 +160,63 @@ public class PieceMovement : MonoBehaviour {
             this.field.transform.position.z - objectHalfSize.z * objectScale.z + this.GetObjectHalfsize(this.gameObject).z);
     }
 
-    private Vector3 ClampObjectPosition(Vector3 position)
+    private bool IsMoveForbiden(KeyCode keyPushed)
     {
 
-        return new Vector3(
-            Mathf.Clamp(position.x, minRange.x, maxRange.x),
-            Mathf.Clamp(position.y, position.y, position.y),
-            Mathf.Clamp(position.z, position.z, position.z)
-            );
+        Vector3 movementDirection = new Vector3();
+
+        switch (keyPushed)
+        {
+            case KeyCode.RightArrow:
+                movementDirection = Vector3.right;
+                break;
+            case KeyCode.LeftArrow:
+                movementDirection = Vector3.left;
+                break;
+            default:
+                break;
+        }
+
+        Transform[] childrenTransform = this.gameObject.GetComponentsInChildren<Transform>();
+
+        foreach (Transform transform in childrenTransform)
+        {
+            if(Physics.Raycast(transform.position, movementDirection, 1f, LayerMask.GetMask("DestroyablePiece", "ArenaWall")))
+            {
+                return true;
+            }
+        }
+
+        return false;
+
+    }
+
+    private bool IsRotateForbiden()
+    {
+        Transform[] childrenTransform = this.gameObject.GetComponentsInChildren<Transform>();
+
+        List<Vector3> directions = new List<Vector3>
+        {
+            Vector3.up,
+            Vector3.down,
+            Vector3.left,
+            Vector3.right
+        };
+
+        foreach (Transform transform in childrenTransform)
+        {
+
+            foreach (Vector3 direction in directions)
+            {
+                if (Physics.Raycast(transform.position, direction, 1f, LayerMask.GetMask("DestroyablePiece", "ArenaWall")))
+                {
+                    return true;
+                }
+            }
+            
+        }
+
+        return false;
     }
 
     public bool IsMoving
