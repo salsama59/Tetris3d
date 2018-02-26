@@ -14,6 +14,7 @@ public class PieceMovement : MonoBehaviour {
     private float elapsedTime;
     public float targetElapsedtime;
     public float timeToMoveToward;
+    public float maxRotateAmplitude;
 
     // Use this for initialization
     void Start ()
@@ -193,30 +194,7 @@ public class PieceMovement : MonoBehaviour {
 
     private bool IsRotateForbiden()
     {
-        Transform[] childrenTransform = this.gameObject.GetComponentsInChildren<Transform>();
-
-        List<Vector3> directions = new List<Vector3>
-        {
-            Vector3.up,
-            Vector3.down,
-            Vector3.left,
-            Vector3.right
-        };
-
-        foreach (Transform transform in childrenTransform)
-        {
-
-            foreach (Vector3 direction in directions)
-            {
-                if (Physics.Raycast(transform.position, direction, 1f, LayerMask.GetMask("DestroyablePiece", "ArenaWall")))
-                {
-                    return true;
-                }
-            }
-            
-        }
-
-        return false;
+        return Physics.CheckSphere(this.gameObject.transform.position, maxRotateAmplitude, LayerMask.GetMask("DestroyablePiece", "ArenaWall"));
     }
 
     public bool IsMoving

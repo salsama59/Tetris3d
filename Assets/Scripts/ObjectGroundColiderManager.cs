@@ -9,9 +9,17 @@ public class ObjectGroundColiderManager : MonoBehaviour
 
         if (other.collider.CompareTag("Piece") && this.IsCollisionAccepted())
         {
-           
+
+            GameObject gameManagerObject = GameObject.FindGameObjectWithTag("GameManager");
+            GameManager gameManager = gameManagerObject.GetComponent<GameManager>();
+
+            
             PieceMovement pieceMovementScript = other.collider.GetComponent<PieceMovement>();
             bool contactFromBelow = this.IsContactFromBelow(other);
+
+            Debug.Log("For the collision between  this.object : " + this.gameObject.name + " and the other :  " + other.gameObject.name);
+            Debug.Log("the other is in movement : " + pieceMovementScript.IsMoving);
+            Debug.Log("And the contact is from below : " + contactFromBelow);
             if (pieceMovementScript.IsMoving && contactFromBelow)
             {
                 pieceMovementScript.IsMoving = false;
@@ -20,17 +28,14 @@ public class ObjectGroundColiderManager : MonoBehaviour
                 objectColidingRigidBody.isKinematic = true;
                 this.CorrectObjectAngles(other.collider.gameObject);
                 this.CorrectObjectPosition(other.collider.gameObject);
+                gameManager.GameMap = this.UpdateOccupiedSpace(other.collider.gameObject, gameManager.GameMap);
+                gameManager.IsReadyToSpawnObject = true;
             }
         }
         else
         {
             return;
         }
-        
-        GameObject gameManagerObject = GameObject.FindGameObjectWithTag("GameManager");
-        GameManager gameManager = gameManagerObject.GetComponent<GameManager>();
-        gameManager.GameMap = this.UpdateOccupiedSpace(other.collider.gameObject, gameManager.GameMap);
-        gameManager.IsReadyToSpawnObject = true;
 
     }
 

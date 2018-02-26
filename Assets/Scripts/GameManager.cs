@@ -27,7 +27,7 @@ public class GameManager : MonoBehaviour {
     void Update () {
         if(IsReadyToSpawnObject)
         {
-            StartCoroutine(SpawnObjects());
+            //StartCoroutine(SpawnObjects());
             IsReadyToSpawnObject = false;
         }
     }
