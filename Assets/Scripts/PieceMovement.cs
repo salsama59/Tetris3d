@@ -1,14 +1,13 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
 
 public class PieceMovement : MonoBehaviour {
 
     Rigidbody gameObJectRigidBody;
     Transform gameObjectTransform;
     public GameObject field;
-    private Vector3 minRange;
-    private Vector3 maxRange;
     private bool isMoving;
     public float speed;
     private float elapsedTime;
@@ -22,8 +21,6 @@ public class PieceMovement : MonoBehaviour {
         IsMoving = true;
         this.gameObjectTransform = this.gameObject.GetComponent<Transform>();
         this.gameObJectRigidBody = this.gameObject.GetComponent<Rigidbody>();
-
-        this.CalculateFieldRanges();
     }
 
     // Update is called once per frame
@@ -143,27 +140,9 @@ public class PieceMovement : MonoBehaviour {
         return this.GetObjectSize(gameObject) * 0.5f;
     }
 
-    void CalculateFieldRanges()
-    {
-        MeshFilter fieldRenderer = this.field.GetComponent<MeshFilter>();
-        Vector3 objectHalfSize = fieldRenderer.mesh.bounds.size * 0.5f;
-        Vector3 objectScale = this.field.transform.localScale;
-
-        this.maxRange = new Vector3(
-            objectHalfSize.x * objectScale.x + this.field.transform.position.x - this.GetObjectHalfsize(this.gameObject).x,
-            objectHalfSize.y * objectScale.y + this.field.transform.position.y - this.GetObjectHalfsize(this.gameObject).y,
-            objectHalfSize.z * objectScale.z + this.field.transform.position.z - this.GetObjectHalfsize(this.gameObject).z
-            );
-
-        this.minRange = new Vector3(
-            this.field.transform.position.x - objectHalfSize.x * objectScale.x + this.GetObjectHalfsize(this.gameObject).x,
-            this.field.transform.position.y - objectHalfSize.y * objectScale.y + this.GetObjectHalfsize(this.gameObject).y,
-            this.field.transform.position.z - objectHalfSize.z * objectScale.z + this.GetObjectHalfsize(this.gameObject).z);
-    }
-
     private bool IsMoveForbiden(KeyCode keyPushed)
     {
-
+        List<bool> rayCastHits = new List<bool>(); 
         Vector3 movementDirection = new Vector3();
 
         switch (keyPushed)
@@ -178,17 +157,22 @@ public class PieceMovement : MonoBehaviour {
                 break;
         }
 
+        float spherePositionAdjustment = movementDirection.x * 0.5f;
+
         Transform[] childrenTransform = this.gameObject.GetComponentsInChildren<Transform>();
 
-        foreach (Transform transform in childrenTransform)
+        foreach (Transform childTransform in childrenTransform)
         {
-            if(Physics.Raycast(transform.position, movementDirection, 1f, LayerMask.GetMask("DestroyablePiece", "ArenaWall")))
-            {
-                return true;
-            }
+            RaycastHit infos;
+            Vector3 sphereOrigin = new Vector3(childTransform.position.x - spherePositionAdjustment, childTransform.position.y, childTransform.position.z);
+            bool hasHitten = Physics.SphereCast(sphereOrigin, 0.5f, movementDirection, out infos, 1f, LayerMask.GetMask("DestroyablePiece", "ArenaWall"));
+            rayCastHits.Add(hasHitten);
         }
 
-        return false;
+        //Check if all raycast hit are false (return true if all hit are false but return false otherwise) 
+        bool movementPossible = rayCastHits.ToArray().All(hit => hit == false);
+        
+        return !movementPossible;
 
     }
 

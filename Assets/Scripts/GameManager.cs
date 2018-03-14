@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class GameManager : MonoBehaviour {
-
+    private const int gameZoneSize = 20;
     public GameObject[] objects;
     public float startWait;
     public float spawnWait;
@@ -27,7 +27,7 @@ public class GameManager : MonoBehaviour {
     void Update () {
         if(IsReadyToSpawnObject)
         {
-            //StartCoroutine(SpawnObjects());
+            StartCoroutine(SpawnObjects());
             IsReadyToSpawnObject = false;
         }
     }
@@ -36,6 +36,7 @@ public class GameManager : MonoBehaviour {
     {
         yield return new WaitForSeconds(startWait);
         GameObject piece = objects[Random.Range(0, objects.Length)];
+       
         PieceMovement pieceMovementScript = piece.GetComponent<PieceMovement>();
 
         GameObject field = GameObject.FindGameObjectWithTag("Background");
@@ -93,21 +94,24 @@ public class GameManager : MonoBehaviour {
 
     private void CreatePositionMap()
     {
+       
         Vector3 maximumValues = GetFieldMaxRange(gameField);
-        for (int k = 0; k < Mathf.RoundToInt(maximumValues.z); k++)
+
+        for (int k = 0; k < Mathf.RoundToInt(gameZoneSize); k++)
         {
-            for (int l = 0; l < Mathf.RoundToInt(maximumValues.x); l++)
+            for (int l = 0; l < Mathf.RoundToInt(gameZoneSize); l++)
             {
                 GameMap[k, l] = new PositionMapElement (new Vector3(l + 0.5f, 0.5f, k + 0.5f), false);
             }
         }
+
     }
 
     private Vector3 GetFieldMaxRange(GameObject field)
     {
 
-        MeshFilter fieldRenderer = field.GetComponent<MeshFilter>();
-        Vector3 objectSize = fieldRenderer.mesh.bounds.size;
+        Collider fieldRenderer = field.GetComponent<Collider>();
+        Vector3 objectSize = fieldRenderer.bounds.size;
         Vector3 objectScale = field.transform.localScale;
 
         Vector3 maxRange = new Vector3(
@@ -121,9 +125,7 @@ public class GameManager : MonoBehaviour {
 
     private void DefineMapSize()
     {
-        GameObject field = GameObject.FindGameObjectWithTag("Background");
-        Vector3 fieldRange = GetFieldMaxRange(field);
-        GameMap = new PositionMapElement[Mathf.RoundToInt(fieldRange.z), Mathf.RoundToInt(fieldRange.x)];
+        GameMap = new PositionMapElement[Mathf.RoundToInt(gameZoneSize), Mathf.RoundToInt(gameZoneSize)];
     }
 
     public bool IsReadyToSpawnObject

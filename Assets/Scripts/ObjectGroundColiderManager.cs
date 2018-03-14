@@ -13,22 +13,18 @@ public class ObjectGroundColiderManager : MonoBehaviour
             GameObject gameManagerObject = GameObject.FindGameObjectWithTag("GameManager");
             GameManager gameManager = gameManagerObject.GetComponent<GameManager>();
 
-            
-            PieceMovement pieceMovementScript = other.collider.GetComponent<PieceMovement>();
+            PieceMovement pieceMovementScript = other.collider.GetComponentInParent<PieceMovement>();
             bool contactFromBelow = this.IsContactFromBelow(other);
 
-            Debug.Log("For the collision between  this.object : " + this.gameObject.name + " and the other :  " + other.gameObject.name);
-            Debug.Log("the other is in movement : " + pieceMovementScript.IsMoving);
-            Debug.Log("And the contact is from below : " + contactFromBelow);
             if (pieceMovementScript.IsMoving && contactFromBelow)
             {
                 pieceMovementScript.IsMoving = false;
-                Rigidbody objectColidingRigidBody = other.collider.GetComponent<Rigidbody>();
+                Rigidbody objectColidingRigidBody = other.collider.GetComponentInParent<Rigidbody>();
                 objectColidingRigidBody.velocity = new Vector3(0, 0, 0);
                 objectColidingRigidBody.isKinematic = true;
-                this.CorrectObjectAngles(other.collider.gameObject);
-                this.CorrectObjectPosition(other.collider.gameObject);
-                gameManager.GameMap = this.UpdateOccupiedSpace(other.collider.gameObject, gameManager.GameMap);
+                this.CorrectObjectAngles(objectColidingRigidBody.gameObject);
+                this.CorrectObjectPosition(objectColidingRigidBody.gameObject);
+                gameManager.GameMap = this.UpdateOccupiedSpace(objectColidingRigidBody.gameObject, gameManager.GameMap);
                 gameManager.IsReadyToSpawnObject = true;
             }
         }
@@ -68,6 +64,7 @@ public class ObjectGroundColiderManager : MonoBehaviour
 
     private PositionMapElement[,] UpdateOccupiedSpace(GameObject parentObject, PositionMapElement[,] positionMap)
     {
+
         Transform[] childrenTransform = parentObject.GetComponentsInChildren<Transform>();
         foreach (Transform transform in childrenTransform)
         {
@@ -76,22 +73,21 @@ public class ObjectGroundColiderManager : MonoBehaviour
             positionMap[linePosition, columnPosition].IsOccupied = true;
             transform.gameObject.layer = LayerMask.NameToLayer("DestroyablePiece");
         }
+
         return positionMap;
     }
 
     private void CorrectObjectAngles(GameObject gameObject)
     {
-
         float xAngle = CorrectObjectAngleValue(gameObject.transform.rotation.eulerAngles.x);
         float yAngle = CorrectObjectAngleValue(gameObject.transform.rotation.eulerAngles.y);
         float zAngle = CorrectObjectAngleValue(gameObject.transform.rotation.eulerAngles.z);
         gameObject.transform.localEulerAngles = new Vector3 (xAngle, yAngle, zAngle);
-
     }
 
     private float CorrectObjectAngleValue(float eulerAngle)
     {
-        float roundedValue = Mathf.Round(eulerAngle);
+        float roundedValue = Mathf.Floor(eulerAngle);
         bool isNegative = false;
 
         if(roundedValue < 0)
@@ -127,24 +123,29 @@ public class ObjectGroundColiderManager : MonoBehaviour
     private bool IsContactFromBelow(Collision otherCollision)
     {
 
-        bool below = false;
+        Transform[] childrenTransform = otherCollision.gameObject.GetComponentsInChildren<Transform>();
 
-        Vector3 objectHalfSize = this.GetObjectHalfsize(otherCollision.gameObject);
-        Vector3 objectScale = otherCollision.gameObject.transform.localScale;
-
-        float objectMinSidePosition = otherCollision.gameObject.transform.position.x - (objectHalfSize.x * objectScale.x);
-        float objectMaxSidePosition = otherCollision.gameObject.transform.position.x + (objectHalfSize.x * objectScale.x);
-
-
-        foreach (ContactPoint contact in otherCollision.contacts)
+        RaycastHit hitInfo;
+        
+        foreach (Transform childTransform in childrenTransform)
         {
-            if (objectMinSidePosition < contact.point.x && objectMaxSidePosition > contact.point.x && contact.point.z > this.gameObject.transform.position.z)
+            
+            if (Physics.Raycast(childTransform.position, new Vector3(0f, 0f, -1f), out hitInfo, 3f, LayerMask.GetMask("DestroyablePiece", "ArenaWall"), QueryTriggerInteraction.Ignore))
             {
-                return true;
+                if (hitInfo.collider != null)
+                {
+                    Vector3 hitNormal = hitInfo.normal;
+                   
+                    if (hitNormal == new Vector3(0f, 0f, 1f))
+                    {
+                        return true;
+                    }
+                }
+
             }
         }
 
-        return below;
+        return false;
 
     }
 
@@ -167,7 +168,6 @@ public class ObjectGroundColiderManager : MonoBehaviour
         return objectSize;
 
     }
-
 
     private Vector3 GetObjectHalfsize(GameObject gameObject)
     {
