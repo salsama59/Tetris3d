@@ -54,16 +54,19 @@ public class PieceMovement : MonoBehaviour {
 
             if (Input.GetKeyDown(KeyCode.Space))
             {
-                if(!this.IsRotateForbiden())
+                bool isClockwise = true;
+
+                if (!this.IsRotateForbiden())
                 {
-                    RotateObject(true);
+                    RotateObject(isClockwise);
                 }
             }
             else if(Input.GetKeyDown(KeyCode.LeftAlt))
             {
+                bool isClockwise = false;
                 if (!this.IsRotateForbiden())
                 {
-                    this.RotateObject(false);
+                    this.RotateObject(isClockwise);
                 }
             }
 
@@ -178,7 +181,53 @@ public class PieceMovement : MonoBehaviour {
 
     private bool IsRotateForbiden()
     {
-        return Physics.CheckSphere(this.gameObject.transform.position, maxRotateAmplitude, LayerMask.GetMask("DestroyablePiece", "ArenaWall"));
+        List<Vector3> nodes = this.CalculatePoints();
+        //this.DrawLines(nodes);
+        return this.SweepHasHit(nodes);
+    }
+
+    private List<Vector3> CalculatePoints()
+    {
+        float radius = maxRotateAmplitude;
+        List<Vector3> nodes = new List<Vector3>();
+        float calcAngle = 0;
+        int segments = 12;
+        float curveAmount = 360f;
+
+        // Calculate Arc on Y-Z    
+        for (int i = 0; i < segments + 1; i++)
+        {
+            float posX = Mathf.Cos(calcAngle * Mathf.Deg2Rad) * radius;
+            float posZ = Mathf.Sin(calcAngle * Mathf.Deg2Rad) * radius;
+            nodes.Add(transform.position + (transform.right * posX) + (transform.forward * posZ));
+            calcAngle += curveAmount / (float)segments;
+        }
+
+        return nodes;
+    }
+
+    private bool SweepHasHit(List<Vector3> nodes)
+    {
+        RaycastHit hit;
+
+        for (int i = 0; i < nodes.Count - 1; i++)
+        {
+            if(Physics.Linecast(nodes[i], nodes[i + 1], out hit, LayerMask.GetMask("DestroyablePiece", "ArenaWall"), QueryTriggerInteraction.Ignore))
+            {
+                return true;
+            }
+            
+        }
+
+        return false;
+    }
+
+    private void DrawLines(List<Vector3> nodes)
+    {
+        for (int i = 0; i < nodes.Count - 1; i++)
+        {
+            Debug.DrawLine(nodes[i], nodes[i + 1], Color.red, 1.5f);
+        }
     }
 
     public bool IsMoving
@@ -192,5 +241,12 @@ public class PieceMovement : MonoBehaviour {
         {
             isMoving = value;
         }
+    }
+
+    private GameObject GenerateObjectClone()
+    {
+
+        return Instantiate(this.gameObject, this.transform.position, this.transform.rotation);
+
     }
 }
