@@ -182,7 +182,6 @@ public class PieceMovement : MonoBehaviour {
     private bool IsRotateForbiden()
     {
         List<Vector3> nodes = this.CalculatePoints();
-        //this.DrawLines(nodes);
         return this.SweepHasHit(nodes);
     }
 
@@ -194,7 +193,7 @@ public class PieceMovement : MonoBehaviour {
         int segments = 12;
         float curveAmount = 360f;
 
-        // Calculate Arc on Y-Z    
+        // Calculate Arc on X-Z    
         for (int i = 0; i < segments + 1; i++)
         {
             float posX = Mathf.Cos(calcAngle * Mathf.Deg2Rad) * radius;

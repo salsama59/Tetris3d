@@ -13,10 +13,14 @@ public class GameManager : MonoBehaviour {
     public GameObject verticalLine;
     private PositionMapElement[,] map;
     private GameObject gameField;
+    private GameObject foreseeWindow;
+    //nullable int shorthand
+    private int? nextObjectIndex = null;
 
     private void Start()
     {
         gameField = GameObject.FindGameObjectWithTag("Background");
+        foreseeWindow = GameObject.FindGameObjectWithTag("ForeseeWindow");
         IsReadyToSpawnObject = true;
         this.DefineMapSize();
         //this.BuildFieldGrid();
@@ -35,16 +39,66 @@ public class GameManager : MonoBehaviour {
     IEnumerator SpawnObjects()
     {
         yield return new WaitForSeconds(startWait);
-        GameObject piece = objects[Random.Range(0, objects.Length)];
+        GameObject piece = null;
+
+        GameObject foreseePieceObject = GameObject.FindGameObjectWithTag("ForeseePiece");
+
+        //Destroy the former foreseen piece before displaying the new one if it exists
+        if(foreseePieceObject != null)
+        {
+            Destroy(foreseePieceObject);
+        }
+
+        //Choose the object to instantiate either the current foreseen or a fresh new one (from start)
+        if (this.nextObjectIndex == null)
+        {
+            piece = objects[Random.Range(0, objects.Length)];
+        }
+        else
+        {
+            piece = objects[(int)this.nextObjectIndex];
+        }
+        //Calculate initial rotation
+        Quaternion spawnRotation = Quaternion.identity;
+
+        //Manage the gameField object
+        this.ManageGameFieldObject(piece, spawnRotation);
+
+        //Manage the foreseen object
+        this.ManageForeseeObject(spawnRotation);
        
+        yield return new WaitForSeconds(spawnWait);
+    }
+
+    private void ManageGameFieldObject(GameObject piece, Quaternion spawnRotation)
+    {
         PieceMovement pieceMovementScript = piece.GetComponent<PieceMovement>();
 
         GameObject field = GameObject.FindGameObjectWithTag("Background");
         pieceMovementScript.field = field;
 
-        Quaternion spawnRotation = Quaternion.identity;
+        
         Instantiate(piece, spawnPosition, spawnRotation);
-        yield return new WaitForSeconds(spawnWait);
+    }
+
+    private void ManageForeseeObject(Quaternion spawnRotation)
+    {
+        GameObject foreseePiece = null;
+        //Randomly select the foreseenObject
+        this.nextObjectIndex = Random.Range(0, objects.Length);
+        foreseePiece = objects[(int)this.nextObjectIndex];
+
+        Vector3 foreseePiecePosition = new Vector3(
+            foreseeWindow.transform.position.x,
+            0.5f,
+            foreseeWindow.transform.position.z);
+        GameObject instantiateForeseeObject = Instantiate(foreseePiece, foreseePiecePosition, spawnRotation);
+        instantiateForeseeObject.tag = "ForeseePiece";
+        PieceMovement instantiateForeseeObjectPieceMovementScript = instantiateForeseeObject.GetComponent<PieceMovement>();
+        instantiateForeseeObjectPieceMovementScript.enabled = false;
+        Rigidbody foreseePieceRigidBody = instantiateForeseeObject.GetComponent<Rigidbody>();
+        foreseePieceRigidBody.isKinematic = true;
+        foreseePieceRigidBody.detectCollisions = false;
     }
 
     private void BuildFieldGrid()
@@ -94,8 +148,6 @@ public class GameManager : MonoBehaviour {
 
     private void CreatePositionMap()
     {
-       
-        Vector3 maximumValues = GetFieldMaxRange(gameField);
 
         for (int k = 0; k < Mathf.RoundToInt(gameZoneSize); k++)
         {
