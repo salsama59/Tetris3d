@@ -4,6 +4,7 @@ public class PositionMapElement {
 
     private Vector3 position;
     private bool isOccupied;
+    private GameObject currentMapElement;
 
     public PositionMapElement(Vector3 position, bool isOccupied)
     {
@@ -34,6 +35,19 @@ public class PositionMapElement {
         set
         {
             position = value;
+        }
+    }
+
+    public GameObject CurrentMapElement
+    {
+        get
+        {
+            return currentMapElement;
+        }
+
+        set
+        {
+            currentMapElement = value;
         }
     }
 }

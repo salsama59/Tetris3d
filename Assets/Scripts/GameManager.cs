@@ -92,8 +92,13 @@ public class GameManager : MonoBehaviour {
             foreseeWindow.transform.position.x,
             0.5f,
             foreseeWindow.transform.position.z);
+
         GameObject instantiateForeseeObject = Instantiate(foreseePiece, foreseePiecePosition, spawnRotation);
-        instantiateForeseeObject.tag = "ForeseePiece";
+        Transform[] childrensTransform =  instantiateForeseeObject.GetComponentsInChildren<Transform>();
+        foreach (Transform childTransform in childrensTransform)
+        {
+            childTransform.gameObject.tag = "ForeseePiece";
+        }
         PieceMovement instantiateForeseeObjectPieceMovementScript = instantiateForeseeObject.GetComponent<PieceMovement>();
         instantiateForeseeObjectPieceMovementScript.enabled = false;
         Rigidbody foreseePieceRigidBody = instantiateForeseeObject.GetComponent<Rigidbody>();
@@ -103,8 +108,8 @@ public class GameManager : MonoBehaviour {
 
     private void BuildFieldGrid()
     {
-        Vector3 maxRange = GetFieldMaxRange(gameField);
-
+        //Vector3 maxRange = GetFieldMaxRange(gameField);
+        Vector3 maxRange = new Vector3(gameZoneSize, 1f, gameZoneSize);
         //Calcul the halfsize of the field
         maxRange.x *= 0.5f;
         maxRange.y *= 0.5f;
@@ -178,6 +183,143 @@ public class GameManager : MonoBehaviour {
     private void DefineMapSize()
     {
         GameMap = new PositionMapElement[Mathf.RoundToInt(gameZoneSize), Mathf.RoundToInt(gameZoneSize)];
+    }
+
+    public void DestroyObjectLines()
+    {
+        List<List<GameObject>> linesToDestroy = this.FetchLinesToDestroy();
+
+        int numberOfLines = linesToDestroy.Count;
+
+        if (numberOfLines == 0)
+        {
+            return;
+        }
+
+        foreach (List<GameObject> objectsToDestroy in linesToDestroy)
+        {
+            this.DestroyObjectLine(objectsToDestroy);
+        }
+        //All the pieces going down by one square and parent without child are destroyed
+        this.CleanUpParents(numberOfLines);
+        //The position map should be updated to impact the pieces new positions
+        this.UpdatePositionMap(numberOfLines);
+    }
+
+    private void DestroyObjectLine(List<GameObject> objectsToDestroy)
+    {
+        foreach (GameObject currentObject in objectsToDestroy)
+        {
+            this.UpdateParentObjectData(currentObject);
+            Destroy(currentObject);
+        }
+    }
+
+    private List<List<GameObject>> FetchLinesToDestroy()
+    {
+        List<List<GameObject>> totalObjectListToDestroy = new List<List<GameObject>>();
+
+        for (int i = 0; i < this.GameMap.GetLength(0); i++)
+        {
+            List<GameObject> listToDestroy = new List<GameObject>();
+            for (int j = 0; j < this.GameMap.GetLength(1); j++)
+            {
+                GameObject element = this.GameMap[i, j].CurrentMapElement;
+                bool isOcupied = this.GameMap[i, j].IsOccupied;
+
+                if (element != null && isOcupied)
+                {
+                    listToDestroy.Add(element);
+                }
+            }
+
+            if (this.GameMap.GetLength(1) == listToDestroy.Count)
+            {
+                totalObjectListToDestroy.Add(listToDestroy);
+            }
+        }
+
+        return totalObjectListToDestroy;
+    }
+
+    private void UpdateParentObjectData(GameObject childObject)
+    {
+        Debug.Log("For " + childObject.name + " : ");
+        Transform childTransform = childObject.GetComponent<Transform>();
+        if (childTransform.parent != null && childTransform.parent.gameObject != null)
+        {
+            GameObject parent = childTransform.parent.gameObject;
+            Debug.Log("Parent transform  is  : " + childTransform.parent);
+            PieceData parentData = parent.GetComponent<PieceData>();
+            Debug.Log("Parent data  is  : " + parentData);
+
+            if (parentData.maxChildNumber != 0 && parentData.childNumberRemaining != 0)
+            {
+                parentData.childNumberRemaining--;
+            }
+
+        }
+    }
+
+    private void CleanUpParents(int numberOfLines)
+    {
+
+        GameObject[] objects = GameObject.FindGameObjectsWithTag("Piece");
+        
+        foreach (GameObject currentObject in objects)
+        {
+
+            PieceData parentData = currentObject.GetComponent<PieceData>();
+
+            if (parentData.maxChildNumber != 0 && parentData.childNumberRemaining == 0)
+            {
+                Debug.Log("destroying " + currentObject.name);
+                Destroy(currentObject);
+                continue;
+            }
+
+            Collider[] currentObjectcolliders = currentObject.GetComponents<Collider>();
+
+            foreach (Collider collider in currentObjectcolliders)
+            {
+                collider.enabled = false;
+            }
+
+            Vector3 positionGap = Vector3.back * numberOfLines;
+
+            currentObject.transform.position += positionGap;
+        }
+            
+    }
+
+    private void UpdatePositionMap(int numberOfLines)
+    {
+        for (int i = 0; i < this.GameMap.GetLength(0); i++)
+        {
+            if(i == 0)
+            {
+                continue;
+            }
+
+            for (int j = 0; j < this.GameMap.GetLength(1); j++)
+            {
+                PositionMapElement currentElement = GameMap[i, j];
+
+                if(currentElement.IsOccupied && currentElement.CurrentMapElement != null)
+                {
+                    //Update de below element
+                    GameMap[i - numberOfLines, j].CurrentMapElement = currentElement.CurrentMapElement;
+                    GameMap[i - numberOfLines, j].Position = currentElement.CurrentMapElement.transform.position;
+                    GameMap[i - numberOfLines, j].IsOccupied = true;
+
+                    //initialise current element
+                    currentElement.IsOccupied = false;
+                    currentElement.Position = new Vector3();
+                    currentElement.CurrentMapElement = null;
+
+                }
+            }
+        }
     }
 
     public bool IsReadyToSpawnObject

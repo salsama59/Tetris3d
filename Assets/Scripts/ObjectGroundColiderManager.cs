@@ -25,6 +25,7 @@ public class ObjectGroundColiderManager : MonoBehaviour
                 this.CorrectObjectAngles(objectColidingRigidBody.gameObject);
                 this.CorrectObjectPosition(objectColidingRigidBody.gameObject);
                 gameManager.GameMap = this.UpdateOccupiedSpace(objectColidingRigidBody.gameObject, gameManager.GameMap);
+                gameManager.DestroyObjectLines();
                 gameManager.IsReadyToSpawnObject = true;
             }
         }
@@ -71,6 +72,12 @@ public class ObjectGroundColiderManager : MonoBehaviour
             int linePosition = (int)(transform.position.z - 0.5f);
             int columnPosition = (int)(transform.position.x - 0.5f);
             positionMap[linePosition, columnPosition].IsOccupied = true;
+
+            if(parentObject != transform.gameObject || (transform.parent == null))
+            {
+                positionMap[linePosition, columnPosition].CurrentMapElement = transform.gameObject;
+            }
+            
             transform.gameObject.layer = LayerMask.NameToLayer("DestroyablePiece");
         }
 
@@ -147,30 +154,5 @@ public class ObjectGroundColiderManager : MonoBehaviour
 
         return false;
 
-    }
-
-    private Vector3 GetObjectSize(GameObject gameObject)
-    {
-        Vector3 objectSize = new Vector3();
-
-        Collider[] colliders = gameObject.GetComponents<Collider>();
-
-
-        foreach (var collider in colliders)
-        {
-            Vector3 colliderSize = collider.bounds.size;
-
-            objectSize.x += colliderSize.x;
-            objectSize.y += colliderSize.y;
-            objectSize.z += colliderSize.z;
-        }
-
-        return objectSize;
-
-    }
-
-    private Vector3 GetObjectHalfsize(GameObject gameObject)
-    {
-        return this.GetObjectSize(gameObject) * 0.5f;
     }
 }
