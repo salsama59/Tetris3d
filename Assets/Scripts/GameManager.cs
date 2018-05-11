@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+
 public class GameManager : MonoBehaviour {
     private const int gameZoneSize = 20;
     public GameObject[] objects;
@@ -187,23 +188,41 @@ public class GameManager : MonoBehaviour {
 
     public void DestroyObjectLines()
     {
-        List<List<GameObject>> linesToDestroy = this.FetchLinesToDestroy();
+        //Retrieve lines to destroy
+        SortedDictionary<int, List<GameObject>> linesToDestroy = this.FetchLinesToDestroy();
 
-        int numberOfLines = linesToDestroy.Count;
+        List<int> linesLimit = new List<int>();
 
-        if (numberOfLines == 0)
+        int processedLineCounter = 0;
+
+        int numberOfLinesToDestroy = linesToDestroy.Count;
+
+        if (numberOfLinesToDestroy == 0)
         {
             return;
         }
 
-        foreach (List<GameObject> objectsToDestroy in linesToDestroy)
+        foreach (KeyValuePair<int, List<GameObject>> objectsToDestroy in linesToDestroy)
         {
-            this.DestroyObjectLine(objectsToDestroy);
+            //Save the destroyed lines index for later use
+            linesLimit.Add(objectsToDestroy.Key);
+            //Keep count of the current process line id to calculate the right object position
+            processedLineCounter++;
+            //Destroy one line
+            this.DestroyObjectLine(objectsToDestroy.Value);
+            //All the relevant pieces going down by one square and parents without child are destroyed
+            this.CleanUpParents(objectsToDestroy.Key, processedLineCounter, numberOfLinesToDestroy);
+            //Errase datas about the suppressed lines in the position map
+            this.UpdateSuppressedLinesInPositionMap(objectsToDestroy.Key);
         }
-        //All the pieces going down by one square and parent without child are destroyed
-        this.CleanUpParents(numberOfLines);
-        //The position map should be updated to impact the pieces new positions
-        this.UpdatePositionMap(numberOfLines);
+
+        foreach (int lineLimit in linesLimit)
+        {
+            //The position map should be updated to impact the pieces new positions after going down by numberOfLinesToDestroy
+            this.UpdatePositionMapForNewPiecesPosition(lineLimit);
+        }
+       
+
     }
 
     private void DestroyObjectLine(List<GameObject> objectsToDestroy)
@@ -215,9 +234,9 @@ public class GameManager : MonoBehaviour {
         }
     }
 
-    private List<List<GameObject>> FetchLinesToDestroy()
+    private SortedDictionary<int, List<GameObject>> FetchLinesToDestroy()
     {
-        List<List<GameObject>> totalObjectListToDestroy = new List<List<GameObject>>();
+        SortedDictionary<int, List<GameObject>> totalObjectListToDestroy = new SortedDictionary<int, List<GameObject>>();
 
         for (int i = 0; i < this.GameMap.GetLength(0); i++)
         {
@@ -235,7 +254,7 @@ public class GameManager : MonoBehaviour {
 
             if (this.GameMap.GetLength(1) == listToDestroy.Count)
             {
-                totalObjectListToDestroy.Add(listToDestroy);
+                totalObjectListToDestroy.Add(i, listToDestroy);
             }
         }
 
@@ -244,28 +263,30 @@ public class GameManager : MonoBehaviour {
 
     private void UpdateParentObjectData(GameObject childObject)
     {
-        Debug.Log("For " + childObject.name + " : ");
         Transform childTransform = childObject.GetComponent<Transform>();
         if (childTransform.parent != null && childTransform.parent.gameObject != null)
         {
             GameObject parent = childTransform.parent.gameObject;
-            Debug.Log("Parent transform  is  : " + childTransform.parent);
             PieceData parentData = parent.GetComponent<PieceData>();
-            Debug.Log("Parent data  is  : " + parentData);
 
             if (parentData.maxChildNumber != 0 && parentData.childNumberRemaining != 0)
             {
                 parentData.childNumberRemaining--;
             }
-
         }
     }
 
-    private void CleanUpParents(int numberOfLines)
+    private void CleanUpParents(int lineLimit, int processedLineCounter, int numberOfLinesToDestroy)
     {
 
         GameObject[] objects = GameObject.FindGameObjectsWithTag("Piece");
-        
+
+        //When there is more than one line to destroy we compensate the lines destroyed by lowering the line limit for each line processed
+        if (numberOfLinesToDestroy > 1 && processedLineCounter > 1)
+        {
+            lineLimit--;
+        }
+
         foreach (GameObject currentObject in objects)
         {
 
@@ -273,7 +294,6 @@ public class GameManager : MonoBehaviour {
 
             if (parentData.maxChildNumber != 0 && parentData.childNumberRemaining == 0)
             {
-                Debug.Log("destroying " + currentObject.name);
                 Destroy(currentObject);
                 continue;
             }
@@ -285,18 +305,26 @@ public class GameManager : MonoBehaviour {
                 collider.enabled = false;
             }
 
-            Vector3 positionGap = Vector3.back * numberOfLines;
+            int currentLine = (int)(currentObject.transform.position.z - 0.5f);
 
-            currentObject.transform.position += positionGap;
+            if (currentLine >= lineLimit)
+            {
+                Vector3 positionGap = Vector3.back;
+
+                currentObject.transform.position += positionGap;
+            }
+
+            
         }
             
     }
 
-    private void UpdatePositionMap(int numberOfLines)
+    private void UpdatePositionMapForNewPiecesPosition(int lineLimit)
     {
         for (int i = 0; i < this.GameMap.GetLength(0); i++)
         {
-            if(i == 0)
+
+            if (i < lineLimit)
             {
                 continue;
             }
@@ -307,19 +335,30 @@ public class GameManager : MonoBehaviour {
 
                 if(currentElement.IsOccupied && currentElement.CurrentMapElement != null)
                 {
-                    //Update de below element
-                    GameMap[i - numberOfLines, j].CurrentMapElement = currentElement.CurrentMapElement;
-                    GameMap[i - numberOfLines, j].Position = currentElement.CurrentMapElement.transform.position;
-                    GameMap[i - numberOfLines, j].IsOccupied = true;
+                    //Update the below element
+                    GameMap[i - 1, j].CurrentMapElement = currentElement.CurrentMapElement;
+                    GameMap[i - 1, j].IsOccupied = true;
 
                     //initialise current element
                     currentElement.IsOccupied = false;
-                    currentElement.Position = new Vector3();
                     currentElement.CurrentMapElement = null;
 
                 }
             }
         }
+    }
+
+    private void UpdateSuppressedLinesInPositionMap(int lineLimit)
+    {
+
+        for (int j = 0; j < this.GameMap.GetLength(1); j++)
+        {
+            PositionMapElement currentElement = GameMap[lineLimit, j];
+            //initialise current element
+            currentElement.IsOccupied = false;
+            currentElement.CurrentMapElement = null;
+        }
+        
     }
 
     public bool IsReadyToSpawnObject

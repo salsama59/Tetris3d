@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System;
 
 public class ObjectGroundColiderManager : MonoBehaviour
 {
@@ -24,7 +25,7 @@ public class ObjectGroundColiderManager : MonoBehaviour
                 objectColidingRigidBody.isKinematic = true;
                 this.CorrectObjectAngles(objectColidingRigidBody.gameObject);
                 this.CorrectObjectPosition(objectColidingRigidBody.gameObject);
-                gameManager.GameMap = this.UpdateOccupiedSpace(objectColidingRigidBody.gameObject, gameManager.GameMap);
+                gameManager.GameMap = this.UpdateMapDatasForObject(objectColidingRigidBody.gameObject, gameManager.GameMap);
                 gameManager.DestroyObjectLines();
                 gameManager.IsReadyToSpawnObject = true;
             }
@@ -63,17 +64,19 @@ public class ObjectGroundColiderManager : MonoBehaviour
         }
     }
 
-    private PositionMapElement[,] UpdateOccupiedSpace(GameObject parentObject, PositionMapElement[,] positionMap)
+    private PositionMapElement[,] UpdateMapDatasForObject(GameObject parentObject, PositionMapElement[,] positionMap)
     {
 
         Transform[] childrenTransform = parentObject.GetComponentsInChildren<Transform>();
+
         foreach (Transform transform in childrenTransform)
         {
-            int linePosition = (int)(transform.position.z - 0.5f);
-            int columnPosition = (int)(transform.position.x - 0.5f);
+            
+            int linePosition = (int)Math.Round(transform.position.z - 0.5f);
+            int columnPosition = (int)Math.Round(transform.position.x - 0.5f);
             positionMap[linePosition, columnPosition].IsOccupied = true;
 
-            if(parentObject != transform.gameObject || (transform.parent == null))
+            if (parentObject != transform.gameObject || (transform.parent == null))
             {
                 positionMap[linePosition, columnPosition].CurrentMapElement = transform.gameObject;
             }
@@ -154,5 +157,54 @@ public class ObjectGroundColiderManager : MonoBehaviour
 
         return false;
 
+    }
+
+    public void WriteMapContentOnConsole(PositionMapElement[,] positionMap)
+    {
+       
+        String line = "";
+
+        for (int k = positionMap.GetLength(0) - 1; k >= 0; k--)
+        {
+            String lineNumber = "";
+
+            if(k.ToString().Length == 1)
+            {
+                lineNumber = 0 + k.ToString() + ",";
+            }
+            else
+            {
+                lineNumber = k.ToString() + ",";
+            }
+
+            line += lineNumber;
+
+            for (int l = 0; l < positionMap.GetLength(1); l++)
+            {
+                PositionMapElement currentElement = positionMap[k, l];
+
+                if (currentElement.IsOccupied)
+                {
+                    line += "O";
+                }
+                else
+                {
+                    line += "X";
+                }
+
+                if (l == positionMap.GetLength(1) - 1)
+                {
+                    line += (";" + Environment.NewLine);
+                }
+                else
+                {
+                    line += ",";
+                }
+            }
+
+        }
+
+        Debug.Log(line);
+       
     }
 }
