@@ -109,8 +109,7 @@ public class GameManager : MonoBehaviour {
 
     private void BuildFieldGrid()
     {
-        //Vector3 maxRange = GetFieldMaxRange(gameField);
-        Vector3 maxRange = new Vector3(gameZoneSize, 1f, gameZoneSize);
+        Vector3 maxRange = GetFieldMaxRange(gameField);
         //Calcul the halfsize of the field
         maxRange.x *= 0.5f;
         maxRange.y *= 0.5f;
@@ -154,10 +153,10 @@ public class GameManager : MonoBehaviour {
 
     private void CreatePositionMap()
     {
-
-        for (int k = 0; k < Mathf.RoundToInt(gameZoneSize); k++)
+        Vector3 maxRange = GetFieldMaxRange(gameField);
+        for (int k = 0; k < Mathf.RoundToInt(maxRange.z); k++)
         {
-            for (int l = 0; l < Mathf.RoundToInt(gameZoneSize); l++)
+            for (int l = 0; l < Mathf.RoundToInt(maxRange.x); l++)
             {
                 GameMap[k, l] = new PositionMapElement (new Vector3(l + 0.5f, 0.5f, k + 0.5f), false);
             }
@@ -168,9 +167,10 @@ public class GameManager : MonoBehaviour {
     private Vector3 GetFieldMaxRange(GameObject field)
     {
 
-        Collider fieldRenderer = field.GetComponent<Collider>();
-        Vector3 objectSize = fieldRenderer.bounds.size;
-        Vector3 objectScale = field.transform.localScale;
+        MeshFilter fieldMeshFilter = field.GetComponent<MeshFilter>();
+        Vector3 objectSize = fieldMeshFilter.mesh.bounds.size;
+
+        Vector3 objectScale = field.transform.lossyScale;
 
         Vector3 maxRange = new Vector3(
             objectSize.x * objectScale.x,
@@ -183,7 +183,9 @@ public class GameManager : MonoBehaviour {
 
     private void DefineMapSize()
     {
-        GameMap = new PositionMapElement[Mathf.RoundToInt(gameZoneSize), Mathf.RoundToInt(gameZoneSize)];
+        Vector3 maxRange = GetFieldMaxRange(gameField);
+        //Initialise the position matrix for the game elements [lines, collumns]
+        GameMap = new PositionMapElement[Mathf.RoundToInt(maxRange.z), Mathf.RoundToInt(maxRange.x)];
     }
 
     public void DestroyObjectLines()
@@ -191,16 +193,16 @@ public class GameManager : MonoBehaviour {
         //Retrieve lines to destroy
         SortedDictionary<int, List<GameObject>> linesToDestroy = this.FetchLinesToDestroy();
 
-        List<int> linesLimit = new List<int>();
-
-        int processedLineCounter = 0;
-
         int numberOfLinesToDestroy = linesToDestroy.Count;
 
         if (numberOfLinesToDestroy == 0)
         {
             return;
         }
+
+        List<int> linesLimit = new List<int>();
+
+        int processedLineCounter = 0;
 
         foreach (KeyValuePair<int, List<GameObject>> objectsToDestroy in linesToDestroy)
         {
@@ -289,7 +291,6 @@ public class GameManager : MonoBehaviour {
 
         foreach (GameObject currentObject in objects)
         {
-
             PieceData parentData = currentObject.GetComponent<PieceData>();
 
             if (parentData.maxChildNumber != 0 && parentData.childNumberRemaining == 0)
@@ -298,23 +299,32 @@ public class GameManager : MonoBehaviour {
                 continue;
             }
 
-            Collider[] currentObjectcolliders = currentObject.GetComponents<Collider>();
-
-            foreach (Collider collider in currentObjectcolliders)
-            {
-                collider.enabled = false;
-            }
-
             int currentLine = (int)(currentObject.transform.position.z - 0.5f);
 
-            if (currentLine >= lineLimit)
-            {
-                Vector3 positionGap = Vector3.back;
+            Vector3 positionGap = Vector3.back;
 
+            if (currentLine > lineLimit)
+            {
                 currentObject.transform.position += positionGap;
             }
+            else if(currentLine == lineLimit)
+            {
+                Transform[] childsTransform =  currentObject.GetComponentsInChildren<Transform>();
 
-            
+                foreach (Transform childrenTransform in childsTransform)
+                {
+                    if(childrenTransform.gameObject != currentObject)
+                    {
+                        float childZaxePosition = childrenTransform.position.z;
+                        float parentZaxePosition = currentObject.transform.position.z;
+
+                        if(childZaxePosition > parentZaxePosition)
+                        {
+                            childrenTransform.position += positionGap;
+                        }
+                    }
+                }
+            }
         }
             
     }
@@ -350,7 +360,7 @@ public class GameManager : MonoBehaviour {
 
     private void UpdateSuppressedLinesInPositionMap(int lineLimit)
     {
-
+        //for every column in the map
         for (int j = 0; j < this.GameMap.GetLength(1); j++)
         {
             PositionMapElement currentElement = GameMap[lineLimit, j];

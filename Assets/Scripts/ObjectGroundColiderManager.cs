@@ -7,32 +7,28 @@ public class ObjectGroundColiderManager : MonoBehaviour
 {
     private void OnCollisionEnter(Collision other)
     {
-
-        if (other.collider.CompareTag("Piece") && this.IsCollisionAccepted())
+        //if a piece child collide with sommething other than the background
+        if (other.collider.CompareTag("PieceChild") && this.IsCollisionAccepted())
         {
-
-            GameObject gameManagerObject = GameObject.FindGameObjectWithTag("GameManager");
-            GameManager gameManager = gameManagerObject.GetComponent<GameManager>();
-
-            PieceMovement pieceMovementScript = other.collider.GetComponentInParent<PieceMovement>();
-            bool contactFromBelow = this.IsContactFromBelow(other);
-
-            if (pieceMovementScript.IsMoving && contactFromBelow)
+            PieceMovement parentPieceMovementScript = other.collider.GetComponentInParent<PieceMovement>();
+            //If the piece are moving
+            if (parentPieceMovementScript.IsMoving)
             {
-                pieceMovementScript.IsMoving = false;
-                Rigidbody objectColidingRigidBody = other.collider.GetComponentInParent<Rigidbody>();
-                objectColidingRigidBody.velocity = new Vector3(0, 0, 0);
-                objectColidingRigidBody.isKinematic = true;
-                this.CorrectObjectAngles(objectColidingRigidBody.gameObject);
-                this.CorrectObjectPosition(objectColidingRigidBody.gameObject);
-                gameManager.GameMap = this.UpdateMapDatasForObject(objectColidingRigidBody.gameObject, gameManager.GameMap);
-                gameManager.DestroyObjectLines();
-                gameManager.IsReadyToSpawnObject = true;
+                if(this.IsContactFromBelow(other))
+                {
+                    GameObject gameManagerObject = GameObject.FindGameObjectWithTag("GameManager");
+                    GameManager gameManagerScript = gameManagerObject.GetComponent<GameManager>();
+                    parentPieceMovementScript.IsMoving = false;
+                    Rigidbody objectColidingParentRigidBody = other.collider.GetComponentInParent<Rigidbody>();
+                    objectColidingParentRigidBody.velocity = new Vector3(0, 0, 0);
+                    objectColidingParentRigidBody.isKinematic = true;
+                    this.CorrectObjectAngles(objectColidingParentRigidBody.gameObject);
+                    this.CorrectObjectPosition(objectColidingParentRigidBody.gameObject);
+                    this.UpdateMapDatasForObject(objectColidingParentRigidBody.gameObject, gameManagerScript.GameMap);
+                    gameManagerScript.DestroyObjectLines();
+                    gameManagerScript.IsReadyToSpawnObject = true;
+                }
             }
-        }
-        else
-        {
-            return;
         }
 
     }
@@ -64,27 +60,19 @@ public class ObjectGroundColiderManager : MonoBehaviour
         }
     }
 
-    private PositionMapElement[,] UpdateMapDatasForObject(GameObject parentObject, PositionMapElement[,] positionMap)
+    private void UpdateMapDatasForObject(GameObject parentObject, PositionMapElement[,] positionMap)
     {
 
         Transform[] childrenTransform = parentObject.GetComponentsInChildren<Transform>();
 
-        foreach (Transform transform in childrenTransform)
+        foreach (Transform childTransform in childrenTransform)
         {
-            
-            int linePosition = (int)Math.Round(transform.position.z - 0.5f);
-            int columnPosition = (int)Math.Round(transform.position.x - 0.5f);
+            int linePosition = (int)Math.Round(childTransform.position.z - 0.5f);
+            int columnPosition = (int)Math.Round(childTransform.position.x - 0.5f);
             positionMap[linePosition, columnPosition].IsOccupied = true;
-
-            if (parentObject != transform.gameObject || (transform.parent == null))
-            {
-                positionMap[linePosition, columnPosition].CurrentMapElement = transform.gameObject;
-            }
-            
-            transform.gameObject.layer = LayerMask.NameToLayer("DestroyablePiece");
+            positionMap[linePosition, columnPosition].CurrentMapElement = childTransform.gameObject;
+            childTransform.gameObject.layer = LayerMask.NameToLayer("DestroyablePiece");
         }
-
-        return positionMap;
     }
 
     private void CorrectObjectAngles(GameObject gameObject)
@@ -157,54 +145,5 @@ public class ObjectGroundColiderManager : MonoBehaviour
 
         return false;
 
-    }
-
-    public void WriteMapContentOnConsole(PositionMapElement[,] positionMap)
-    {
-       
-        String line = "";
-
-        for (int k = positionMap.GetLength(0) - 1; k >= 0; k--)
-        {
-            String lineNumber = "";
-
-            if(k.ToString().Length == 1)
-            {
-                lineNumber = 0 + k.ToString() + ",";
-            }
-            else
-            {
-                lineNumber = k.ToString() + ",";
-            }
-
-            line += lineNumber;
-
-            for (int l = 0; l < positionMap.GetLength(1); l++)
-            {
-                PositionMapElement currentElement = positionMap[k, l];
-
-                if (currentElement.IsOccupied)
-                {
-                    line += "O";
-                }
-                else
-                {
-                    line += "X";
-                }
-
-                if (l == positionMap.GetLength(1) - 1)
-                {
-                    line += (";" + Environment.NewLine);
-                }
-                else
-                {
-                    line += ",";
-                }
-            }
-
-        }
-
-        Debug.Log(line);
-       
     }
 }

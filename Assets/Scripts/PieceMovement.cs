@@ -118,31 +118,6 @@ public class PieceMovement : MonoBehaviour {
         }
     }
 
-    private Vector3 GetObjectSize(GameObject gameObject)
-    {
-        Vector3 objectSize = new Vector3();
-
-        Collider[] colliders = gameObject.GetComponents<Collider>();
-
-
-        foreach (var collider in colliders)
-        {
-            Vector3 colliderSize = collider.bounds.size;
-
-            objectSize.x += colliderSize.x;
-            objectSize.y += colliderSize.y;
-            objectSize.z += colliderSize.z;
-        }
-
-        return objectSize;
-
-    }
-
-    private Vector3 GetObjectHalfsize(GameObject gameObject)
-    {
-        return this.GetObjectSize(gameObject) * 0.5f;
-    }
-
     private bool IsMoveForbiden(KeyCode keyPushed)
     {
         List<bool> rayCastHits = new List<bool>(); 
@@ -173,9 +148,9 @@ public class PieceMovement : MonoBehaviour {
         }
 
         //Check if all raycast hit are false (return true if all hit are false but return false otherwise) 
-        bool movementPossible = rayCastHits.ToArray().All(hit => hit == false);
+        bool movementAllowed = rayCastHits.ToArray().All(hit => hit == false);
         
-        return !movementPossible;
+        return !movementAllowed;
 
     }
 
@@ -240,12 +215,5 @@ public class PieceMovement : MonoBehaviour {
         {
             isMoving = value;
         }
-    }
-
-    private GameObject GenerateObjectClone()
-    {
-
-        return Instantiate(this.gameObject, this.transform.position, this.transform.rotation);
-
     }
 }
