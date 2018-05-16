@@ -26,6 +26,12 @@ public class ObjectGroundColiderManager : MonoBehaviour
                     this.CorrectObjectPosition(objectColidingParentRigidBody.gameObject);
                     this.UpdateMapDatasForObject(objectColidingParentRigidBody.gameObject, gameManagerScript.GameMap);
                     gameManagerScript.DestroyObjectLines();
+                    //test for the game over requirements
+                    if(gameManagerScript.IsInGameOverState(objectColidingParentRigidBody.gameObject))
+                    {
+                        gameManagerScript.GameOver();
+                        return;
+                    }
                     gameManagerScript.IsReadyToSpawnObject = true;
                 }
             }

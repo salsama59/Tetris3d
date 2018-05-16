@@ -13,7 +13,7 @@ public class PositionMapElement {
         IsOccupied = isOccupied;
     }
 
-    public void WriteMapContentOnConsole(PositionMapElement[,] positionMap)
+    public static void WriteMapContentOnConsole(PositionMapElement[,] positionMap)
     {
 
         String line = "";

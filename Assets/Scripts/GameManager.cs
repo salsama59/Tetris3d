@@ -1,10 +1,11 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 public class GameManager : MonoBehaviour {
-    private const int gameZoneSize = 20;
+    public const float maxAllowedPlayableLine = 19.5f;
     public GameObject[] objects;
     public float startWait;
     public float spawnWait;
@@ -13,15 +14,23 @@ public class GameManager : MonoBehaviour {
     public GameObject horizontalLine;
     public GameObject verticalLine;
     private PositionMapElement[,] map;
-    private GameObject gameField;
+    public GameObject gameField;
+    private GameObject background;
     private GameObject foreseeWindow;
     //nullable int shorthand
     private int? nextObjectIndex = null;
+    public Text restartText;
+    public Text gameOverText;
+    private bool restart;
 
     private void Start()
     {
-        gameField = GameObject.FindGameObjectWithTag("Background");
-        foreseeWindow = GameObject.FindGameObjectWithTag("ForeseeWindow");
+        this.restart = false;
+        this.restartText.text = "";
+        this.gameOverText.text = "";
+        Instantiate(gameField, new Vector3(), Quaternion.identity);
+        this.background = GameObject.FindGameObjectWithTag("Background");
+        this.foreseeWindow = GameObject.FindGameObjectWithTag("ForeseeWindow");
         IsReadyToSpawnObject = true;
         this.DefineMapSize();
         //this.BuildFieldGrid();
@@ -34,6 +43,14 @@ public class GameManager : MonoBehaviour {
         {
             StartCoroutine(SpawnObjects());
             IsReadyToSpawnObject = false;
+        }
+
+        if (restart)
+        {
+            if (Input.GetKeyDown(KeyCode.Return))
+            {
+                SceneManager.LoadScene("Game_Scene");
+            }
         }
     }
 
@@ -109,7 +126,7 @@ public class GameManager : MonoBehaviour {
 
     private void BuildFieldGrid()
     {
-        Vector3 maxRange = GetFieldMaxRange(gameField);
+        Vector3 maxRange = GetFieldMaxRange(background);
         //Calcul the halfsize of the field
         maxRange.x *= 0.5f;
         maxRange.y *= 0.5f;
@@ -118,15 +135,15 @@ public class GameManager : MonoBehaviour {
         Vector3 minRange = new Vector3(maxRange.x * -1, maxRange.y * -1, maxRange.z * -1);
 
 
-        for (float i = minRange.x + gameField.transform.position.x; i < maxRange.x + gameField.transform.position.x; i++)
+        for (float i = minRange.x + background.transform.position.x; i < maxRange.x + background.transform.position.x; i++)
         {
 
             Vector3 objectPosition = new Vector3(0f, 0f, 0f);
             GameObject line = Instantiate(verticalLine, objectPosition, Quaternion.identity);
 
-            Vector3 lineVerticePosition1 = new Vector3(i, 0.5f, maxRange.z + gameField.transform.position.z);
+            Vector3 lineVerticePosition1 = new Vector3(i, 0.5f, maxRange.z + background.transform.position.z);
 
-            Vector3 lineVerticePosition2 = new Vector3(i, 0.5f, minRange.z + gameField.transform.position.z);
+            Vector3 lineVerticePosition2 = new Vector3(i, 0.5f, minRange.z + background.transform.position.z);
 
             LineRenderer lineRenderer = line.GetComponent<LineRenderer>();
 
@@ -134,14 +151,14 @@ public class GameManager : MonoBehaviour {
             lineRenderer.SetPosition(1, lineVerticePosition2);
         }
 
-        for (float i = minRange.z + gameField.transform.position.z; i < maxRange.z + gameField.transform.position.z; i++)
+        for (float i = minRange.z + background.transform.position.z; i < maxRange.z + background.transform.position.z; i++)
         {
             Vector3 objectPosition = new Vector3(0f, 0f, 0f);
             GameObject line = Instantiate(horizontalLine, objectPosition, Quaternion.identity);
 
-            Vector3 lineVerticePosition1 = new Vector3(maxRange.x + gameField.transform.position.x, 0.5f, i);
+            Vector3 lineVerticePosition1 = new Vector3(maxRange.x + background.transform.position.x, 0.5f, i);
 
-            Vector3 lineVerticePosition2 = new Vector3(minRange.x + gameField.transform.position.x, 0.5f, i);
+            Vector3 lineVerticePosition2 = new Vector3(minRange.x + background.transform.position.x, 0.5f, i);
 
             LineRenderer lineRenderer = line.GetComponent<LineRenderer>();
 
@@ -153,7 +170,7 @@ public class GameManager : MonoBehaviour {
 
     private void CreatePositionMap()
     {
-        Vector3 maxRange = GetFieldMaxRange(gameField);
+        Vector3 maxRange = GetFieldMaxRange(background);
         for (int k = 0; k < Mathf.RoundToInt(maxRange.z); k++)
         {
             for (int l = 0; l < Mathf.RoundToInt(maxRange.x); l++)
@@ -166,24 +183,20 @@ public class GameManager : MonoBehaviour {
 
     private Vector3 GetFieldMaxRange(GameObject field)
     {
-
         MeshFilter fieldMeshFilter = field.GetComponent<MeshFilter>();
         Vector3 objectSize = fieldMeshFilter.mesh.bounds.size;
-
-        Vector3 objectScale = field.transform.lossyScale;
-
+        Vector3 objectScale = field.transform.localScale;
         Vector3 maxRange = new Vector3(
             objectSize.x * objectScale.x,
             objectSize.y * objectScale.y,
             objectSize.z * objectScale.z
             );
-
         return maxRange;
     }
 
     private void DefineMapSize()
     {
-        Vector3 maxRange = GetFieldMaxRange(gameField);
+        Vector3 maxRange = GetFieldMaxRange(background);
         //Initialise the position matrix for the game elements [lines, collumns]
         GameMap = new PositionMapElement[Mathf.RoundToInt(maxRange.z), Mathf.RoundToInt(maxRange.x)];
     }
@@ -369,6 +382,53 @@ public class GameManager : MonoBehaviour {
             currentElement.CurrentMapElement = null;
         }
         
+    }
+
+    public GameObject FetchHighestChild(GameObject parent)
+    {
+        Transform[] childrenTransform = parent.GetComponentsInChildren<Transform>();
+
+        GameObject highestChild = null;
+
+        foreach (Transform childTransform in childrenTransform)
+        {
+
+            if (childTransform.gameObject == parent)
+            {
+                continue;
+            }
+
+            if (highestChild == null)
+            {
+                highestChild = childTransform.gameObject;
+
+                continue;
+            }
+
+            if (childTransform.position.z > highestChild.transform.position.z)
+            {
+                highestChild = childTransform.gameObject;
+            }
+        }
+
+        return highestChild;
+    }
+
+    public bool IsInGameOverState(GameObject parentPiece)
+    {
+        GameObject highestParentPieceChild = FetchHighestChild(parentPiece);
+        int currentParentPieceLine = (int)(parentPiece.transform.position.z - 0.5f);
+        int currentHighestParentPieceChildLine = (int)(highestParentPieceChild.transform.position.z - 0.5f);
+        return currentParentPieceLine > maxAllowedPlayableLine || currentHighestParentPieceChildLine > maxAllowedPlayableLine;
+    }
+
+    public void GameOver()
+    {
+        this.gameOverText.text = "Game Over";
+        this.restartText.text = "Press 'Return' for restart";
+        this.restart = true;
+        this.gameOverText.gameObject.SetActive(true);
+        this.restartText.gameObject.SetActive(true);
     }
 
     public bool IsReadyToSpawnObject
