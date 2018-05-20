@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -15,13 +16,14 @@ public class GameManager : MonoBehaviour {
     public GameObject verticalLine;
     private PositionMapElement[,] map;
     public GameObject gameField;
-    private GameObject background;
     private GameObject foreseeWindow;
     //nullable int shorthand
     private int? nextObjectIndex = null;
     public Text restartText;
     public Text gameOverText;
     private bool restart;
+    public Transform backgroundTransform;
+    private ScoreManager scoreManagerScript;
 
     private void Start()
     {
@@ -29,12 +31,13 @@ public class GameManager : MonoBehaviour {
         this.restartText.text = "";
         this.gameOverText.text = "";
         Instantiate(gameField, new Vector3(), Quaternion.identity);
-        this.background = GameObject.FindGameObjectWithTag("Background");
         this.foreseeWindow = GameObject.FindGameObjectWithTag("ForeseeWindow");
         IsReadyToSpawnObject = true;
         this.DefineMapSize();
         //this.BuildFieldGrid();
         this.CreatePositionMap();
+        GameObject scoreManagerObject = GameObject.FindGameObjectWithTag("ScoreManager");
+        scoreManagerScript = scoreManagerObject.GetComponent<ScoreManager>();
     }
 
     // Update is called once per frame
@@ -126,7 +129,7 @@ public class GameManager : MonoBehaviour {
 
     private void BuildFieldGrid()
     {
-        Vector3 maxRange = GetFieldMaxRange(background);
+        Vector3 maxRange = GetFieldMaxRange(backgroundTransform);
         //Calcul the halfsize of the field
         maxRange.x *= 0.5f;
         maxRange.y *= 0.5f;
@@ -135,15 +138,15 @@ public class GameManager : MonoBehaviour {
         Vector3 minRange = new Vector3(maxRange.x * -1, maxRange.y * -1, maxRange.z * -1);
 
 
-        for (float i = minRange.x + background.transform.position.x; i < maxRange.x + background.transform.position.x; i++)
+        for (float i = minRange.x + backgroundTransform.position.x; i < maxRange.x + backgroundTransform.position.x; i++)
         {
 
             Vector3 objectPosition = new Vector3(0f, 0f, 0f);
             GameObject line = Instantiate(verticalLine, objectPosition, Quaternion.identity);
 
-            Vector3 lineVerticePosition1 = new Vector3(i, 0.5f, maxRange.z + background.transform.position.z);
+            Vector3 lineVerticePosition1 = new Vector3(i, 0.5f, maxRange.z + backgroundTransform.position.z);
 
-            Vector3 lineVerticePosition2 = new Vector3(i, 0.5f, minRange.z + background.transform.position.z);
+            Vector3 lineVerticePosition2 = new Vector3(i, 0.5f, minRange.z + backgroundTransform.position.z);
 
             LineRenderer lineRenderer = line.GetComponent<LineRenderer>();
 
@@ -151,14 +154,14 @@ public class GameManager : MonoBehaviour {
             lineRenderer.SetPosition(1, lineVerticePosition2);
         }
 
-        for (float i = minRange.z + background.transform.position.z; i < maxRange.z + background.transform.position.z; i++)
+        for (float i = minRange.z + backgroundTransform.position.z; i < maxRange.z + backgroundTransform.position.z; i++)
         {
             Vector3 objectPosition = new Vector3(0f, 0f, 0f);
             GameObject line = Instantiate(horizontalLine, objectPosition, Quaternion.identity);
 
-            Vector3 lineVerticePosition1 = new Vector3(maxRange.x + background.transform.position.x, 0.5f, i);
+            Vector3 lineVerticePosition1 = new Vector3(maxRange.x + backgroundTransform.position.x, 0.5f, i);
 
-            Vector3 lineVerticePosition2 = new Vector3(minRange.x + background.transform.position.x, 0.5f, i);
+            Vector3 lineVerticePosition2 = new Vector3(minRange.x + backgroundTransform.position.x, 0.5f, i);
 
             LineRenderer lineRenderer = line.GetComponent<LineRenderer>();
 
@@ -170,7 +173,7 @@ public class GameManager : MonoBehaviour {
 
     private void CreatePositionMap()
     {
-        Vector3 maxRange = GetFieldMaxRange(background);
+        Vector3 maxRange = GetFieldMaxRange(backgroundTransform);
         for (int k = 0; k < Mathf.RoundToInt(maxRange.z); k++)
         {
             for (int l = 0; l < Mathf.RoundToInt(maxRange.x); l++)
@@ -181,11 +184,11 @@ public class GameManager : MonoBehaviour {
 
     }
 
-    private Vector3 GetFieldMaxRange(GameObject field)
+    private Vector3 GetFieldMaxRange(Transform backgroundTransform)
     {
-        MeshFilter fieldMeshFilter = field.GetComponent<MeshFilter>();
-        Vector3 objectSize = fieldMeshFilter.mesh.bounds.size;
-        Vector3 objectScale = field.transform.localScale;
+
+        Vector3 objectSize = backgroundTransform.position;
+        Vector3 objectScale = backgroundTransform.localScale;
         Vector3 maxRange = new Vector3(
             objectSize.x * objectScale.x,
             objectSize.y * objectScale.y,
@@ -196,7 +199,7 @@ public class GameManager : MonoBehaviour {
 
     private void DefineMapSize()
     {
-        Vector3 maxRange = GetFieldMaxRange(background);
+        Vector3 maxRange = GetFieldMaxRange(backgroundTransform);
         //Initialise the position matrix for the game elements [lines, collumns]
         GameMap = new PositionMapElement[Mathf.RoundToInt(maxRange.z), Mathf.RoundToInt(maxRange.x)];
     }
@@ -231,13 +234,16 @@ public class GameManager : MonoBehaviour {
             this.UpdateSuppressedLinesInPositionMap(objectsToDestroy.Key);
         }
 
+        this.scoreManagerScript.DisplayEarnedPoints(numberOfLinesToDestroy, linesToDestroy.Keys.Last());
+
         foreach (int lineLimit in linesLimit)
         {
             //The position map should be updated to impact the pieces new positions after going down by numberOfLinesToDestroy
             this.UpdatePositionMapForNewPiecesPosition(lineLimit);
         }
-       
-
+        // TODO make the text disappear after the destroy animation finished (should take arround 1 or 2 seconds)
+        this.scoreManagerScript.pointsText.gameObject.SetActive(false);
+        this.scoreManagerScript.AddPlayerPointAmountToScore(numberOfLinesToDestroy);
     }
 
     private void DestroyObjectLine(List<GameObject> objectsToDestroy)
