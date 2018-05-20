@@ -16,7 +16,7 @@ public class GameManager : MonoBehaviour {
     public GameObject verticalLine;
     private PositionMapElement[,] map;
     public GameObject gameField;
-    private GameObject foreseeWindow;
+    public GameObject foreseeWindow;
     //nullable int shorthand
     private int? nextObjectIndex = null;
     public Text restartText;
@@ -31,13 +31,14 @@ public class GameManager : MonoBehaviour {
         this.restartText.text = "";
         this.gameOverText.text = "";
         Instantiate(gameField, new Vector3(), Quaternion.identity);
-        this.foreseeWindow = GameObject.FindGameObjectWithTag("ForeseeWindow");
+        Instantiate(foreseeWindow, foreseeWindow.transform.position, Quaternion.identity);
         IsReadyToSpawnObject = true;
         this.DefineMapSize();
         //this.BuildFieldGrid();
         this.CreatePositionMap();
         GameObject scoreManagerObject = GameObject.FindGameObjectWithTag("ScoreManager");
         scoreManagerScript = scoreManagerObject.GetComponent<ScoreManager>();
+        scoreManagerScript.ScoreText.gameObject.SetActive(true);
     }
 
     // Update is called once per frame
@@ -242,7 +243,7 @@ public class GameManager : MonoBehaviour {
             this.UpdatePositionMapForNewPiecesPosition(lineLimit);
         }
         // TODO make the text disappear after the destroy animation finished (should take arround 1 or 2 seconds)
-        this.scoreManagerScript.pointsText.gameObject.SetActive(false);
+        this.scoreManagerScript.PointsText.gameObject.SetActive(false);
         this.scoreManagerScript.AddPlayerPointAmountToScore(numberOfLinesToDestroy);
     }
 

@@ -9,18 +9,20 @@ public class ScoreManager : MonoBehaviour {
     private int playerScore;
     public Text pointsText;
     public GameObject pointsTextGameObject;
+    public GameObject scoreTextGameObject;
 
     // Use this for initialization
-    void Start () {
+    void Start ()
+    {
         this.playerScore = 0;
-        this.scoreText.text = "Score \n" + this.playerScore;
-        this.pointsText.text = "";
+        this.ScoreText.text = "Score \n" + this.playerScore;
+        this.PointsText.text = "";
     }
 	
 	// Update is called once per frame
 	void Update ()
     {
-        this.scoreText.text = "Score \n" + this.playerScore;
+        this.ScoreText.text = "Score \n" + this.playerScore;
     }
 
     private int GetLineDestroyPoints(int nbLine)
@@ -67,11 +69,37 @@ public class ScoreManager : MonoBehaviour {
         Vector3 lineWorldPosition = new Vector3(10, 2, lineId + 0.5f);
         //Calculate the text position depending on the destroyed line position
         Vector3 textPosition = Camera.main.WorldToScreenPoint(lineWorldPosition);
-        RectTransform textRectTransform = this.pointsText.GetComponent<RectTransform>();
+        RectTransform textRectTransform = this.PointsText.GetComponent<RectTransform>();
         textRectTransform.position = textPosition;
-        this.pointsText.gameObject.SetActive(true);
-        this.pointsText.text = "+ " + this.GetTotalEarnedPoint(nbLine);
+        this.PointsText.gameObject.SetActive(true);
+        this.PointsText.text = "+ " + this.GetTotalEarnedPoint(nbLine);
         
+    }
+
+    public Text ScoreText
+    {
+        get
+        {
+            return scoreText;
+        }
+
+        set
+        {
+            scoreText = value;
+        }
+    }
+
+    public Text PointsText
+    {
+        get
+        {
+            return pointsText;
+        }
+
+        set
+        {
+            pointsText = value;
+        }
     }
 
 }
