@@ -7,7 +7,7 @@ public class PieceMovement : MonoBehaviour {
 
     Rigidbody gameObJectRigidBody;
     Transform gameObjectTransform;
-    public GameObject field;
+    private GameObject field;
     private bool isMoving;
     public float speed;
     private float elapsedTime;
@@ -214,6 +214,19 @@ public class PieceMovement : MonoBehaviour {
         set
         {
             isMoving = value;
+        }
+    }
+
+    public GameObject Field
+    {
+        get
+        {
+            return field;
+        }
+
+        set
+        {
+            field = value;
         }
     }
 }

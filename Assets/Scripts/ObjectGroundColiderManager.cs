@@ -7,10 +7,27 @@ public class ObjectGroundColiderManager : MonoBehaviour
 {
     private void OnCollisionEnter(Collision other)
     {
+        
         //if a piece child collide with sommething other than the background
         if (other.collider.CompareTag("PieceChild") && this.IsCollisionAccepted())
         {
-            PieceMovement parentPieceMovementScript = other.collider.GetComponentInParent<PieceMovement>();
+
+            PieceMovement parentPieceMovementScript = null;
+
+            if (other.collider.transform.parent == null && other.collider.CompareTag("PieceChild") && this.transform.parent != null && this.CompareTag("PieceChild"))
+            {
+                parentPieceMovementScript = this.GetComponentInParent<PieceMovement>();
+            }
+            else
+            {
+                parentPieceMovementScript = other.collider.GetComponentInParent<PieceMovement>();
+            }
+
+            if(parentPieceMovementScript == null)
+            {
+                return;
+            }
+
             //If the piece are moving
             if (parentPieceMovementScript.IsMoving)
             {
@@ -25,9 +42,10 @@ public class ObjectGroundColiderManager : MonoBehaviour
                     this.CorrectObjectAngles(objectColidingParentRigidBody.gameObject);
                     this.CorrectObjectPosition(objectColidingParentRigidBody.gameObject);
                     this.UpdateMapDatasForObject(objectColidingParentRigidBody.gameObject, gameManagerScript.GameMap);
+                    gameManagerScript.CleanUpPieceObject(objectColidingParentRigidBody.gameObject);
                     gameManagerScript.DestroyObjectLines();
                     //test for the game over requirements
-                    if(gameManagerScript.IsInGameOverState(objectColidingParentRigidBody.gameObject))
+                    if (gameManagerScript.IsGameOver())
                     {
                         gameManagerScript.GameOver();
                         return;
