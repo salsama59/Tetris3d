@@ -101,45 +101,14 @@ public class ObjectGroundColiderManager : MonoBehaviour
 
     private void CorrectObjectAngles(GameObject gameObject)
     {
-        float xAngle = CorrectObjectAngleValue(gameObject.transform.rotation.eulerAngles.x);
-        float yAngle = CorrectObjectAngleValue(gameObject.transform.rotation.eulerAngles.y);
-        float zAngle = CorrectObjectAngleValue(gameObject.transform.rotation.eulerAngles.z);
+        PieceMetadatas objectScriptPieceMetadatas = gameObject.GetComponent<PieceMetadatas>();
+        //The last rotation known is stored in the piece metadatas
+        Quaternion objectQuaternion = objectScriptPieceMetadatas.CurrentRotation;
+        float xAngle = objectQuaternion.eulerAngles.x;
+        float yAngle = objectQuaternion.eulerAngles.y;
+        float zAngle = objectQuaternion.eulerAngles.z;
+        
         gameObject.transform.localEulerAngles = new Vector3 (xAngle, yAngle, zAngle);
-    }
-
-    private float CorrectObjectAngleValue(float eulerAngle)
-    {
-        float roundedValue = Mathf.Floor(eulerAngle);
-        bool isNegative = false;
-
-        if(roundedValue < 0)
-        {
-            roundedValue *= -1;
-            isNegative = true;
-        }
-
-        if(roundedValue <= 360f && roundedValue > 270f)
-        {
-            roundedValue = 360f;
-        }
-        else if(roundedValue <= 270f && roundedValue > 180f)
-        {
-            roundedValue = 270f;
-        }
-        else if(roundedValue <= 180f && roundedValue > 90f)
-        {
-            roundedValue = 180f;
-        }
-        else if (roundedValue <= 90f && roundedValue > 45f)
-        {
-            roundedValue = 90f;
-        }
-        else if(roundedValue <= 45f && roundedValue >= 0f)
-        {
-            roundedValue = 0f;
-        }
-
-        return isNegative ? roundedValue * -1 : roundedValue;
     }
 
     private bool IsContactFromBelow(Collision otherCollision)
