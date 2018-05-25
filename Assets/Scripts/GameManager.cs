@@ -24,6 +24,7 @@ public class GameManager : MonoBehaviour {
     private bool restart;
     public Transform backgroundTransform;
     private ScoreManager scoreManagerScript;
+    private int pieceId;
 
     private void Start()
     {
@@ -97,10 +98,14 @@ public class GameManager : MonoBehaviour {
         PieceMovement pieceMovementScript = piece.GetComponent<PieceMovement>();
 
         GameObject field = GameObject.FindGameObjectWithTag("Background");
-        pieceMovementScript.field = field;
+        pieceMovementScript.Field = field;
 
+
+        GameObject instanciatedPiece = Instantiate(piece, spawnPosition, spawnRotation);
+
+        //Update parent piece name and the children too thank to the pieceId
+        this.UpdatePiecesName(instanciatedPiece);
         
-        Instantiate(piece, spawnPosition, spawnRotation);
     }
 
     private void ManageForeseeObject(Quaternion spawnRotation)
@@ -221,6 +226,8 @@ public class GameManager : MonoBehaviour {
 
         int processedLineCounter = 0;
 
+        this.TogglePieceChildObjectCollider(false);
+
         foreach (KeyValuePair<int, List<GameObject>> objectsToDestroy in linesToDestroy)
         {
             //Save the destroyed lines index for later use
@@ -229,11 +236,13 @@ public class GameManager : MonoBehaviour {
             processedLineCounter++;
             //Destroy one line
             this.DestroyObjectLine(objectsToDestroy.Value);
-            //All the relevant pieces going down by one square and parents without child are destroyed
-            this.CleanUpParents(objectsToDestroy.Key, processedLineCounter, numberOfLinesToDestroy);
+            //All the relevant pieces going down by one square
+            this.MovePiecesDown(objectsToDestroy.Key, processedLineCounter, numberOfLinesToDestroy);
             //Errase datas about the suppressed lines in the position map
             this.UpdateSuppressedLinesInPositionMap(objectsToDestroy.Key);
         }
+
+        this.TogglePieceChildObjectCollider(true);
 
         this.scoreManagerScript.DisplayEarnedPoints(numberOfLinesToDestroy, linesToDestroy.Keys.Last());
 
@@ -251,57 +260,42 @@ public class GameManager : MonoBehaviour {
     {
         foreach (GameObject currentObject in objectsToDestroy)
         {
-            this.UpdateParentObjectData(currentObject);
-            Destroy(currentObject);
+            Destroy(currentObject.transform.gameObject);
         }
     }
 
     private SortedDictionary<int, List<GameObject>> FetchLinesToDestroy()
     {
+        //Sort the line to destroy by line number
         SortedDictionary<int, List<GameObject>> totalObjectListToDestroy = new SortedDictionary<int, List<GameObject>>();
 
-        for (int i = 0; i < this.GameMap.GetLength(0); i++)
+        for(int i = 0; i < (int)(maxAllowedPlayableLine + 0.5f); i++)
         {
-            List<GameObject> listToDestroy = new List<GameObject>();
-            for (int j = 0; j < this.GameMap.GetLength(1); j++)
+            //Find the game object on the current map line
+            GameObject[] listToDestroy = GameObject.FindGameObjectsWithTag("PieceChild")
+                .Where(pieceChildObject => this.IsGameObjectOnLine(pieceChildObject, i))
+                .ToArray();
+            //If the gameObject unmber match the field width it is a complete destroyable line
+            if (this.GameMap.GetLength(1) == listToDestroy.Length)
             {
-                GameObject element = this.GameMap[i, j].CurrentMapElement;
-                bool isOcupied = this.GameMap[i, j].IsOccupied;
-
-                if (element != null && isOcupied)
-                {
-                    listToDestroy.Add(element);
-                }
+                totalObjectListToDestroy.Add(i, listToDestroy.ToList());
             }
 
-            if (this.GameMap.GetLength(1) == listToDestroy.Count)
-            {
-                totalObjectListToDestroy.Add(i, listToDestroy);
-            }
         }
 
         return totalObjectListToDestroy;
     }
 
-    private void UpdateParentObjectData(GameObject childObject)
+    private bool IsGameObjectOnLine(GameObject targetObject, int lineNumber)
     {
-        Transform childTransform = childObject.GetComponent<Transform>();
-        if (childTransform.parent != null && childTransform.parent.gameObject != null)
-        {
-            GameObject parent = childTransform.parent.gameObject;
-            PieceData parentData = parent.GetComponent<PieceData>();
-
-            if (parentData.maxChildNumber != 0 && parentData.childNumberRemaining != 0)
-            {
-                parentData.childNumberRemaining--;
-            }
-        }
+        int targetObjectLineNumber = (int)(targetObject.GetComponent<PieceMetadatas>().CurrentPieceLine);
+        return targetObjectLineNumber == lineNumber;
     }
 
-    private void CleanUpParents(int lineLimit, int processedLineCounter, int numberOfLinesToDestroy)
+    private void MovePiecesDown(int lineLimit, int processedLineCounter, int numberOfLinesToDestroy)
     {
 
-        GameObject[] objects = GameObject.FindGameObjectsWithTag("Piece");
+        GameObject[] objects = GameObject.FindGameObjectsWithTag("PieceChild");
 
         //When there is more than one line to destroy we compensate the lines destroyed by lowering the line limit for each line processed
         if (numberOfLinesToDestroy > 1 && processedLineCounter > 1)
@@ -311,40 +305,16 @@ public class GameManager : MonoBehaviour {
 
         foreach (GameObject currentObject in objects)
         {
-            PieceData parentData = currentObject.GetComponent<PieceData>();
-
-            if (parentData.maxChildNumber != 0 && parentData.childNumberRemaining == 0)
-            {
-                Destroy(currentObject);
-                continue;
-            }
-
+            
             int currentLine = (int)(currentObject.transform.position.z - 0.5f);
 
             Vector3 positionGap = Vector3.back;
 
-            if (currentLine > lineLimit)
+            if (currentLine >= lineLimit)
             {
                 currentObject.transform.position += positionGap;
             }
-            else if(currentLine == lineLimit)
-            {
-                Transform[] childsTransform =  currentObject.GetComponentsInChildren<Transform>();
-
-                foreach (Transform childrenTransform in childsTransform)
-                {
-                    if(childrenTransform.gameObject != currentObject)
-                    {
-                        float childZaxePosition = childrenTransform.position.z;
-                        float parentZaxePosition = currentObject.transform.position.z;
-
-                        if(childZaxePosition > parentZaxePosition)
-                        {
-                            childrenTransform.position += positionGap;
-                        }
-                    }
-                }
-            }
+            
         }
             
     }
@@ -391,42 +361,38 @@ public class GameManager : MonoBehaviour {
         
     }
 
-    public GameObject FetchHighestChild(GameObject parent)
+    public GameObject FetchHighestPieceChild()
     {
-        Transform[] childrenTransform = parent.GetComponentsInChildren<Transform>();
 
-        GameObject highestChild = null;
-
-        foreach (Transform childTransform in childrenTransform)
+        for(int i = 0; i < this.GameMap.GetLength(1); i++)
         {
+            bool occupied = this.GameMap[(int)(maxAllowedPlayableLine + 0.5f), i].IsOccupied;
 
-            if (childTransform.gameObject == parent)
+            if(occupied)
             {
-                continue;
+                return this.GameMap[(int)(maxAllowedPlayableLine + 0.5f), i].CurrentMapElement;
             }
-
-            if (highestChild == null)
-            {
-                highestChild = childTransform.gameObject;
-
-                continue;
-            }
-
-            if (childTransform.position.z > highestChild.transform.position.z)
-            {
-                highestChild = childTransform.gameObject;
-            }
+             
         }
 
-        return highestChild;
+        return null;
+        
     }
 
-    public bool IsInGameOverState(GameObject parentPiece)
+    public bool IsGameOver()
     {
-        GameObject highestParentPieceChild = FetchHighestChild(parentPiece);
-        int currentParentPieceLine = (int)(parentPiece.transform.position.z - 0.5f);
-        int currentHighestParentPieceChildLine = (int)(highestParentPieceChild.transform.position.z - 0.5f);
-        return currentParentPieceLine > maxAllowedPlayableLine || currentHighestParentPieceChildLine > maxAllowedPlayableLine;
+
+        GameObject highestPieceChild = this.FetchHighestPieceChild();
+
+        if(highestPieceChild == null)
+        {
+            return false;
+        }
+
+        int currentHighestPieceChildLine = (int)(highestPieceChild.transform.position.z - 0.5f);
+
+        return currentHighestPieceChildLine > maxAllowedPlayableLine;
+
     }
 
     public void GameOver()
@@ -436,6 +402,51 @@ public class GameManager : MonoBehaviour {
         this.restart = true;
         this.gameOverText.gameObject.SetActive(true);
         this.restartText.gameObject.SetActive(true);
+    }
+
+    public void CleanUpPieceObject(GameObject parent)
+    {
+        parent.transform.DetachChildren();
+        Destroy(parent);
+    }
+
+    private void TogglePieceChildObjectCollider(bool activate)
+    {
+        GameObject[] pieceChildObjectList = GameObject.FindGameObjectsWithTag("PieceChild");
+
+        foreach (GameObject pieceChildObject in pieceChildObjectList)
+        {
+            Collider pieceChildObjectCollider = pieceChildObject.GetComponent<BoxCollider>();
+
+            pieceChildObjectCollider.enabled = activate;
+        }
+    }
+
+    private void UpdatePiecesName(GameObject piece)
+    {
+        piece.name = this.GenerateParentPieceName(piece);
+
+        Transform[] childrenTransform = piece.GetComponentsInChildren<Transform>();
+
+        foreach (Transform childTransform in childrenTransform)
+        {
+            if(childTransform.gameObject != piece)
+            {
+                childTransform.gameObject.name = this.GenerateChildPieceName(childTransform.gameObject, piece.name);
+            }   
+        }
+
+        pieceId++;
+    }
+
+    private string GenerateParentPieceName(GameObject parentPiece)
+    {
+        return parentPiece.name.Replace("(Clone)", "") + "_" +  pieceId;
+    }
+
+    private string GenerateChildPieceName(GameObject childPiece, string currentParentName)
+    {
+        return currentParentName + "_" + childPiece.name;
     }
 
     public bool IsReadyToSpawnObject
