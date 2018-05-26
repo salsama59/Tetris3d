@@ -4,20 +4,24 @@ using UnityEngine;
 using System.Linq;
 
 public class PieceMovement : MonoBehaviour {
-
+    private const float rotationMaxValue = 360f;
+    private const float rotationAmount = 90f;
     Rigidbody gameObJectRigidBody;
     Transform gameObjectTransform;
     private GameObject field;
     private bool isMoving;
-    public float speed;
     private float elapsedTime;
     public float targetElapsedtime;
     public float timeToMoveToward;
     public float maxRotateAmplitude;
+    private float pieceRotationSpeed;
+    private GameManager gameManagerInstance;
 
     // Use this for initialization
     void Start ()
     {
+        PieceRotationSpeed = 90f;
+        gameManagerInstance = FindObjectOfType<GameManager>();
         IsMoving = true;
         this.gameObjectTransform = this.gameObject.GetComponent<Transform>();
         this.gameObJectRigidBody = this.gameObject.GetComponent<Rigidbody>();
@@ -72,11 +76,11 @@ public class PieceMovement : MonoBehaviour {
 
             if (Input.GetKey(KeyCode.DownArrow))
             {
-                newGameObjectVelocity = new Vector3(this.gameObJectRigidBody.velocity.x, this.gameObJectRigidBody.velocity.y, verticalMove * this.speed);
+                newGameObjectVelocity = new Vector3(this.gameObJectRigidBody.velocity.x, this.gameObJectRigidBody.velocity.y, verticalMove * gameManagerInstance.pieceMovementSpeed);
             }
             else
             {
-                newGameObjectVelocity = new Vector3(this.gameObJectRigidBody.velocity.x, this.gameObJectRigidBody.velocity.y, -0.5f * this.speed);
+                newGameObjectVelocity = new Vector3(this.gameObJectRigidBody.velocity.x, this.gameObJectRigidBody.velocity.y, -0.5f * gameManagerInstance.pieceMovementSpeed);
             }
 
             this.gameObJectRigidBody.velocity = newGameObjectVelocity;
@@ -85,28 +89,21 @@ public class PieceMovement : MonoBehaviour {
 
     private void RotateObject(bool isClockwise)
     {
-        Quaternion newrotation;
-        Quaternion rotationPreview;
+        float yAxeRotation = rotationAmount;
 
-        if (isClockwise)
+        if (!isClockwise)
         {
-            newrotation = Quaternion.Euler(0f, 90f, 0f);
-            rotationPreview = this.gameObjectTransform.rotation * newrotation;
-            if (rotationPreview.y == 360f)
-            {
-                newrotation = Quaternion.Euler(0f, 0f, 0f);
-            }
+            yAxeRotation *= -1;
         }
-        else
-        {
-            newrotation = Quaternion.Euler(0f, -90f, 0f);
-            rotationPreview = this.gameObjectTransform.rotation * newrotation;
-            if (rotationPreview.y == -360f)
-            {
-                newrotation = Quaternion.Euler(0f, 0f, 0f);
-            }
-        }
-        this.gameObjectTransform.rotation *= newrotation;
+
+        //Wanted rotation calculation 
+        Quaternion newrotation = Quaternion.Euler(Quaternion.identity.x, yAxeRotation, Quaternion.identity.z);
+        //The from rotation
+        Quaternion originRotation = this.gameObjectTransform.rotation;
+        //The to rotation
+        Quaternion destinationRotation = originRotation * newrotation;
+        //Rotate smoothly
+        this.gameObjectTransform.rotation = Quaternion.Slerp(originRotation, destinationRotation, Time.time * PieceRotationSpeed);
     }
 
     private void MoveObjectToNewPosition(Vector3 newPosition)
@@ -166,7 +163,7 @@ public class PieceMovement : MonoBehaviour {
         List<Vector3> nodes = new List<Vector3>();
         float calcAngle = 0;
         int segments = 12;
-        float curveAmount = 360f;
+        float curveAmount = rotationMaxValue;
 
         // Calculate Arc on X-Z    
         for (int i = 0; i < segments + 1; i++)
@@ -227,6 +224,19 @@ public class PieceMovement : MonoBehaviour {
         set
         {
             field = value;
+        }
+    }
+
+    public float PieceRotationSpeed
+    {
+        get
+        {
+            return pieceRotationSpeed;
+        }
+
+        set
+        {
+            pieceRotationSpeed = value;
         }
     }
 }

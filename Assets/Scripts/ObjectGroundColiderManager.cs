@@ -66,7 +66,6 @@ public class ObjectGroundColiderManager : MonoBehaviour
     {
         GameObject gameManagerObject = GameObject.FindGameObjectWithTag("GameManager");
         GameManager gameManager = gameManagerObject.GetComponent<GameManager>();
-
         PositionMapElement[,] positionMap = gameManager.GameMap;
 
         for (int i = 0; i < positionMap.GetLength(0); i++)

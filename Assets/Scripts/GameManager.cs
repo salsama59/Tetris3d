@@ -25,6 +25,7 @@ public class GameManager : MonoBehaviour {
     public Transform backgroundTransform;
     private ScoreManager scoreManagerScript;
     private int pieceId;
+    public float pieceMovementSpeed;
 
     private void Start()
     {
