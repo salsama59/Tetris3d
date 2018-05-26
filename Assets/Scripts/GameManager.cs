@@ -25,6 +25,7 @@ public class GameManager : MonoBehaviour {
     public Transform backgroundTransform;
     private ScoreManager scoreManagerScript;
     private int pieceId;
+    public float pieceMovementSpeed;
 
     private void Start()
     {
@@ -273,7 +274,7 @@ public class GameManager : MonoBehaviour {
         {
             //Find the game object on the current map line
             GameObject[] listToDestroy = GameObject.FindGameObjectsWithTag("PieceChild")
-                .Where(pieceChildObject => this.IsGameObjectOnLine(pieceChildObject, i))
+                .Where(pieceChildObject => this.IsGameObjectOnLine(ref pieceChildObject, i))
                 .ToArray();
             //If the gameObject unmber match the field width it is a complete destroyable line
             if (this.GameMap.GetLength(1) == listToDestroy.Length)
@@ -286,9 +287,15 @@ public class GameManager : MonoBehaviour {
         return totalObjectListToDestroy;
     }
 
-    private bool IsGameObjectOnLine(GameObject targetObject, int lineNumber)
+    private bool IsGameObjectOnLine(ref GameObject targetObject, int lineNumber)
     {
-        int targetObjectLineNumber = (int)(targetObject.GetComponent<PieceMetadatas>().CurrentPieceLine);
+        int? targetObjectLineNumber = null;
+        if (!targetObject.CompareTag("ForeseePiece"))
+        {
+            PieceMetadatas targetObjectScriptPieceMetadatas = targetObject.GetComponent<PieceMetadatas>();
+            targetObjectLineNumber = (int)(targetObjectScriptPieceMetadatas.CurrentPieceLine);
+        }
+        
         return targetObjectLineNumber == lineNumber;
     }
 
