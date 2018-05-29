@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -26,6 +27,9 @@ public class GameManager : MonoBehaviour {
     private ScoreManager scoreManagerScript;
     private int pieceId;
     public float pieceMovementSpeed;
+    public GameObject explosionEffects;
+    private GameObject currentGamePiece;
+    private bool isDeletingLines;
 
     private void Start()
     {
@@ -45,7 +49,17 @@ public class GameManager : MonoBehaviour {
 
     // Update is called once per frame
     void Update () {
-        if(IsReadyToSpawnObject)
+
+        if (CurrentGamePiece != null && !IsDeletingLines)
+        {
+            this.FreezePiece(false, false);
+        }
+        else if (CurrentGamePiece != null && IsDeletingLines)
+        {
+            this.FreezePiece(true, true);
+        }
+
+        if (IsReadyToSpawnObject)
         {
             StartCoroutine(SpawnObjects());
             IsReadyToSpawnObject = false;
@@ -58,6 +72,14 @@ public class GameManager : MonoBehaviour {
                 SceneManager.LoadScene("Game_Scene");
             }
         }
+    }
+
+    private void FreezePiece(bool isPieceMoving, bool pieceKinematicState)
+    {
+        PieceMovement pieceMovementScript = CurrentGamePiece.GetComponent<PieceMovement>();
+        pieceMovementScript.IsMoving = isPieceMoving == false? true : false;
+        Rigidbody currentPieceRigidBody = CurrentGamePiece.GetComponent<Rigidbody>();
+        currentPieceRigidBody.isKinematic = pieceKinematicState;
     }
 
     IEnumerator SpawnObjects()
@@ -76,7 +98,7 @@ public class GameManager : MonoBehaviour {
         //Choose the object to instantiate either the current foreseen or a fresh new one (from start)
         if (this.nextObjectIndex == null)
         {
-            piece = objects[Random.Range(0, objects.Length)];
+            piece = objects[UnityEngine.Random.Range(0, objects.Length)];
         }
         else
         {
@@ -106,14 +128,16 @@ public class GameManager : MonoBehaviour {
 
         //Update parent piece name and the children too thank to the pieceId
         this.UpdatePiecesName(instanciatedPiece);
-        
+
+        CurrentGamePiece = instanciatedPiece;
+
     }
 
     private void ManageForeseeObject(Quaternion spawnRotation)
     {
         GameObject foreseePiece = null;
         //Randomly select the foreseenObject
-        this.nextObjectIndex = Random.Range(0, objects.Length);
+        this.nextObjectIndex = UnityEngine.Random.Range(0, objects.Length);
         foreseePiece = objects[(int)this.nextObjectIndex];
 
         Vector3 foreseePiecePosition = new Vector3(
@@ -235,33 +259,70 @@ public class GameManager : MonoBehaviour {
             linesLimit.Add(objectsToDestroy.Key);
             //Keep count of the current process line id to calculate the right object position
             processedLineCounter++;
-            //Destroy one line
-            this.DestroyObjectLine(objectsToDestroy.Value);
-            //All the relevant pieces going down by one square
-            this.MovePiecesDown(objectsToDestroy.Key, processedLineCounter, numberOfLinesToDestroy);
+            //Call the coroutine for line destruction
+            StartCoroutine(this.SuppressLineRoutine(linesToDestroy, objectsToDestroy, numberOfLinesToDestroy, processedLineCounter));
             //Errase datas about the suppressed lines in the position map
             this.UpdateSuppressedLinesInPositionMap(objectsToDestroy.Key);
         }
-
-        this.TogglePieceChildObjectCollider(true);
-
-        this.scoreManagerScript.DisplayEarnedPoints(numberOfLinesToDestroy, linesToDestroy.Keys.Last());
 
         foreach (int lineLimit in linesLimit)
         {
             //The position map should be updated to impact the pieces new positions after going down by numberOfLinesToDestroy
             this.UpdatePositionMapForNewPiecesPosition(lineLimit);
         }
-        // TODO make the text disappear after the destroy animation finished (should take arround 1 or 2 seconds)
-        this.scoreManagerScript.PointsText.gameObject.SetActive(false);
-        this.scoreManagerScript.AddPlayerPointAmountToScore(numberOfLinesToDestroy);
+
     }
 
-    private void DestroyObjectLine(List<GameObject> objectsToDestroy)
+    IEnumerator SuppressLineRoutine(SortedDictionary<int, List<GameObject>> linesToDestroy, KeyValuePair<int, List<GameObject>> objectsToDestroy, int numberOfLinesToDestroy, int processedLineCounter)
     {
-        foreach (GameObject currentObject in objectsToDestroy)
+
+        IsDeletingLines = true;
+        //Display the current amount of points earned for the line break
+        this.scoreManagerScript.DisplayEarnedPoints(numberOfLinesToDestroy, linesToDestroy.Keys.Last());
+        //Keep count of the current process line id to calculate the right object position
+        processedLineCounter++;
+        //Destroy one line
+        yield return this.DestroyObjectLine(objectsToDestroy, processedLineCounter, numberOfLinesToDestroy);
+        
+    }
+
+    IEnumerator DestroyObjectLine(KeyValuePair<int, List<GameObject>> objectsToDestroy, int processedLineCounter, int numberOfLinesToDestroy)
+    {
+
+        List<GameObject> sortedObjectsToDestroyList = objectsToDestroy.Value.OrderBy(
+            currentObject => currentObject.transform.position.x
+            ).ToList();
+
+        foreach (GameObject currentObject in sortedObjectsToDestroyList)
         {
             Destroy(currentObject.transform.gameObject);
+            Instantiate(explosionEffects, currentObject.transform.position, explosionEffects.transform.rotation);
+            yield return new WaitForSecondsRealtime(0.05f);
+        }
+
+        //All the relevant pieces going down by one square
+        yield return this.MovePiecesDown(objectsToDestroy.Key, processedLineCounter, numberOfLinesToDestroy);
+    }
+
+    public void WaitCoroutine(IEnumerator func)
+    {
+        while (func.MoveNext())
+        {
+            if (func.Current != null)
+            {
+                IEnumerator num;
+                try
+                {
+                    num = (IEnumerator)func.Current;
+                }
+                catch (InvalidCastException)
+                {
+                    if (func.Current.GetType() == typeof(WaitForSeconds))
+                        Debug.LogWarning("Skipped call to WaitForSeconds. Use WaitForSecondsRealtime instead.");
+                    return;  // Skip WaitForSeconds, WaitForEndOfFrame and WaitForFixedUpdate
+                }
+                WaitCoroutine(num);
+            }
         }
     }
 
@@ -296,13 +357,15 @@ public class GameManager : MonoBehaviour {
             targetObjectLineNumber = (int)(targetObjectScriptPieceMetadatas.CurrentPieceLine);
         }
         
-        return targetObjectLineNumber == lineNumber;
+        return targetObjectLineNumber == lineNumber && LayerMask.LayerToName(targetObject.layer).Equals("DestroyablePiece");
     }
 
-    private void MovePiecesDown(int lineLimit, int processedLineCounter, int numberOfLinesToDestroy)
+    IEnumerator MovePiecesDown(int lineLimit, int processedLineCounter, int numberOfLinesToDestroy)
     {
 
-        GameObject[] objects = GameObject.FindGameObjectsWithTag("PieceChild");
+        GameObject[] objects = GameObject.FindGameObjectsWithTag("PieceChild")
+                               .Where(pieceObject => LayerMask.LayerToName(pieceObject.layer).Equals("DestroyablePiece"))
+                               .OrderBy(currentObject => currentObject.transform.position.x).ToArray();
 
         //When there is more than one line to destroy we compensate the lines destroyed by lowering the line limit for each line processed
         if (numberOfLinesToDestroy > 1 && processedLineCounter > 1)
@@ -312,18 +375,45 @@ public class GameManager : MonoBehaviour {
 
         foreach (GameObject currentObject in objects)
         {
-            
             int currentLine = (int)(currentObject.transform.position.z - 0.5f);
 
             Vector3 positionGap = Vector3.back;
 
             if (currentLine >= lineLimit)
             {
-                currentObject.transform.position += positionGap;
+                //lower the all pieces in an asynchronous way 
+                StartCoroutine(this.LowerPiecePosition(currentObject, positionGap));
             }
-            
         }
-            
+
+        //Hide the line break earned points
+        this.scoreManagerScript.PointsText.gameObject.SetActive(false);
+        //Display new calculated score
+        this.scoreManagerScript.AddPlayerPointAmountToScore(numberOfLinesToDestroy);
+        IsDeletingLines = false;
+        this.TogglePieceChildObjectCollider(true);
+
+        yield return null;
+
+    }
+
+
+    IEnumerator LowerPiecePosition(GameObject currentObject, Vector3 positionGap)
+    {
+        float targetPosition = currentObject.transform.position.z + positionGap.z;
+        while (true)
+        {
+            yield return new WaitForSeconds(0.06f);
+
+            Vector3 newCalculatedPosition = currentObject.transform.position + positionGap;
+
+            currentObject.transform.position = Vector3.MoveTowards(currentObject.transform.position, newCalculatedPosition, 0.5f);
+
+            if (currentObject.transform.position.z <= targetPosition)
+            {
+                yield break;
+            }
+        }
     }
 
     private void UpdatePositionMapForNewPiecesPosition(int lineLimit)
@@ -415,6 +505,7 @@ public class GameManager : MonoBehaviour {
     {
         parent.transform.DetachChildren();
         Destroy(parent);
+        this.CurrentGamePiece = null;
     }
 
     private void TogglePieceChildObjectCollider(bool activate)
@@ -479,6 +570,32 @@ public class GameManager : MonoBehaviour {
         set
         {
             map = value;
+        }
+    }
+
+    public GameObject CurrentGamePiece
+    {
+        get
+        {
+            return currentGamePiece;
+        }
+
+        set
+        {
+            currentGamePiece = value;
+        }
+    }
+
+    public bool IsDeletingLines
+    {
+        get
+        {
+            return isDeletingLines;
+        }
+
+        set
+        {
+            isDeletingLines = value;
         }
     }
 }
