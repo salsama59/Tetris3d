@@ -69,9 +69,14 @@ public class GameManager : MonoBehaviour {
         {
             if (Input.GetKeyDown(KeyCode.Return))
             {
-                SceneManager.LoadScene("Game_Scene");
+                SceneManager.LoadScene("One_Player_Mode_Game_Scene");
+            }
+            else if(Input.GetKeyDown(KeyCode.Space))
+            {
+                SceneManager.LoadScene("Main_Menu_Scene");
             }
         }
+
     }
 
     private void FreezePiece(bool isPieceMoving, bool pieceKinematicState)
@@ -495,7 +500,9 @@ public class GameManager : MonoBehaviour {
     public void GameOver()
     {
         this.gameOverText.text = "Game Over";
-        this.restartText.text = "Press 'Return' for restart";
+        this.restartText.text = "Press 'Return' for restart level \n";
+        this.restartText.text += "Press 'Space' to return to the main menu";
+        
         this.restart = true;
         this.gameOverText.gameObject.SetActive(true);
         this.restartText.gameObject.SetActive(true);
