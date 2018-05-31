@@ -1,12 +1,12 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class ButtonsController : MonoBehaviour
 {
     private GameObject mainMenu;
-    public GameObject gameManager;
     public GameObject[] mainMenuButtons;
     public GameObject[] localModeSubMenuButtons;
     private int currentMenuId;
@@ -74,7 +74,7 @@ public class ButtonsController : MonoBehaviour
     private void LaunchGame()
     {
         Destroy(MainMenu);
-        gameManager.SetActive(true);
+        SceneManager.LoadScene("One_Player_Mode_Game_Scene");
     }
 
     public GameObject MainMenu
