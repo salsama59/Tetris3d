@@ -16,6 +16,8 @@ public class PieceMovement : MonoBehaviour {
     public float maxRotateAmplitude;
     private float pieceRotationSpeed;
     private GameManager gameManagerInstance;
+    public int ownerId;
+    public enum Direction {RIGHT, LEFT, DOWN};
 
     // Use this for initialization
     void Start ()
@@ -33,13 +35,13 @@ public class PieceMovement : MonoBehaviour {
         if (IsMoving)
         {
             elapsedTime += Time.deltaTime;
-            float verticalMove = Input.GetAxis("Vertical");
+            float verticalMove = -1f;
 
             Vector3 newGameObjectVelocity = new Vector3();
 
             Vector3 newPosition = new Vector3();
 
-            if (Input.GetKey(KeyCode.RightArrow))
+            if (Input.GetKey(DetectPlayerMovement(Direction.RIGHT)))
             {
                 if(!this.IsMoveForbiden(KeyCode.RightArrow))
                 {
@@ -47,7 +49,7 @@ public class PieceMovement : MonoBehaviour {
                     this.MoveObjectToNewPosition(newPosition);
                 }
             }
-            else if (Input.GetKey(KeyCode.LeftArrow))
+            else if (Input.GetKey(DetectPlayerMovement(Direction.LEFT)))
             {
                 if (!this.IsMoveForbiden(KeyCode.LeftArrow))
                 {
@@ -56,7 +58,7 @@ public class PieceMovement : MonoBehaviour {
                 }
             }
 
-            if (Input.GetKeyDown(KeyCode.Space))
+            if (Input.GetKeyDown(DetectPlayerRotation(Direction.RIGHT)))
             {
                 bool isClockwise = true;
 
@@ -65,7 +67,7 @@ public class PieceMovement : MonoBehaviour {
                     RotateObject(isClockwise);
                 }
             }
-            else if(Input.GetKeyDown(KeyCode.LeftAlt))
+            else if(Input.GetKeyDown(DetectPlayerRotation(Direction.LEFT)))
             {
                 bool isClockwise = false;
                 if (!this.IsRotateForbiden())
@@ -74,17 +76,104 @@ public class PieceMovement : MonoBehaviour {
                 }
             }
 
-            if (Input.GetKey(KeyCode.DownArrow))
+            if (Input.GetKey(DetectPlayerMovement(Direction.DOWN)))
             {
-                newGameObjectVelocity = new Vector3(this.gameObJectRigidBody.velocity.x, this.gameObJectRigidBody.velocity.y, verticalMove * gameManagerInstance.pieceMovementSpeed);
+                newGameObjectVelocity = new Vector3(gameObJectRigidBody.velocity.x, gameObJectRigidBody.velocity.y, verticalMove * this.GetPieceMovementSpeed());
             }
             else
             {
-                newGameObjectVelocity = new Vector3(this.gameObJectRigidBody.velocity.x, this.gameObJectRigidBody.velocity.y, -0.5f * gameManagerInstance.pieceMovementSpeed);
+                newGameObjectVelocity = new Vector3(this.gameObJectRigidBody.velocity.x, this.gameObJectRigidBody.velocity.y, -0.5f * this.GetPieceMovementSpeed());
             }
 
             this.gameObJectRigidBody.velocity = newGameObjectVelocity;
         }
+    }
+
+
+    private KeyCode DetectPlayerMovement(Direction direction)
+    {
+
+        KeyCode expectedKey = 0;
+
+        switch (this.OwnerId)
+        {
+            case (int)GameManager.PlayerId.PLAYER_1 :
+
+                if(direction == Direction.LEFT)
+                {
+                    expectedKey = KeyCode.Q;
+                }
+                else if(direction == Direction.RIGHT)
+                {
+                    expectedKey = KeyCode.D;
+                }
+                else if(direction == Direction.DOWN)
+                {
+                    expectedKey = KeyCode.W;
+                }
+                
+                break;
+
+            case (int)GameManager.PlayerId.PLAYER_2:
+
+                if (direction == Direction.LEFT)
+                {
+                    expectedKey = KeyCode.LeftArrow;
+                }
+                else if (direction == Direction.RIGHT)
+                {
+                    expectedKey = KeyCode.RightArrow;
+                }
+                else if (direction == Direction.DOWN)
+                {
+                    expectedKey = KeyCode.DownArrow;
+                }
+
+                break;
+
+            default:
+                break;
+        }
+
+        return expectedKey;
+    }
+
+    private KeyCode DetectPlayerRotation(Direction direction)
+    {
+
+        KeyCode expectedKey = 0;
+
+        switch (this.OwnerId)
+        {
+            case (int)GameManager.PlayerId.PLAYER_1:
+
+                if (direction == Direction.LEFT)
+                {
+                    expectedKey = KeyCode.LeftAlt;
+                }
+                else if (direction == Direction.RIGHT)
+                {
+                    expectedKey = KeyCode.Space;
+                }
+                break;
+
+            case (int)GameManager.PlayerId.PLAYER_2:
+
+                if (direction == Direction.LEFT)
+                {
+                    expectedKey = KeyCode.RightAlt;
+                }
+                else if (direction == Direction.RIGHT)
+                {
+                    expectedKey = KeyCode.RightControl;
+                }
+                break;
+
+            default:
+                break;
+        }
+
+        return expectedKey;
     }
 
     private void RotateObject(bool isClockwise)
@@ -140,7 +229,7 @@ public class PieceMovement : MonoBehaviour {
         {
             RaycastHit infos;
             Vector3 sphereOrigin = new Vector3(childTransform.position.x - spherePositionAdjustment, childTransform.position.y, childTransform.position.z);
-            bool hasHitten = Physics.SphereCast(sphereOrigin, 0.5f, movementDirection, out infos, 1f, LayerMask.GetMask("DestroyablePiece", "ArenaWall"));
+            bool hasHitten = Physics.SphereCast(sphereOrigin, 0.5f, movementDirection, out infos, 1f, LayerMask.GetMask(LayerConstants.LAYER_NAME_DESTROYABLE_PIECE, LayerConstants.LAYER_NAME_ARENA_WALL));
             rayCastHits.Add(hasHitten);
         }
 
@@ -183,7 +272,7 @@ public class PieceMovement : MonoBehaviour {
 
         for (int i = 0; i < nodes.Count - 1; i++)
         {
-            if(Physics.Linecast(nodes[i], nodes[i + 1], out hit, LayerMask.GetMask("DestroyablePiece", "ArenaWall"), QueryTriggerInteraction.Ignore))
+            if(Physics.Linecast(nodes[i], nodes[i + 1], out hit, LayerMask.GetMask(LayerConstants.LAYER_NAME_DESTROYABLE_PIECE, LayerConstants.LAYER_NAME_ARENA_WALL), QueryTriggerInteraction.Ignore))
             {
                 return true;
             }
@@ -199,6 +288,11 @@ public class PieceMovement : MonoBehaviour {
         {
             Debug.DrawLine(nodes[i], nodes[i + 1], Color.red, 1.5f);
         }
+    }
+
+    private float GetPieceMovementSpeed()
+    {
+        return gameManagerInstance.PlayersPiecesMovementSpeed[this.OwnerId];
     }
 
     public bool IsMoving
@@ -237,6 +331,19 @@ public class PieceMovement : MonoBehaviour {
         set
         {
             pieceRotationSpeed = value;
+        }
+    }
+
+    public int OwnerId
+    {
+        get
+        {
+            return ownerId;
+        }
+
+        set
+        {
+            ownerId = value;
         }
     }
 }
