@@ -95,22 +95,18 @@ public class ScoreManager : MonoBehaviour {
         String pointTextTagName = null;
         String fieldTagName = null;
 
-        if (playerId == (int)GameManager.PlayerId.PLAYER_1)
-        {
-            scoreTextTagName = TagConstants.TAG_NAME_PLAYER_1_SCORE_TEXT;
-            pointTextTagName = TagConstants.TAG_NAME_PLAYER_1_POINTS_TEXT;
-            fieldTagName = TagConstants.TAG_NAME_PLAYER_1_FIELD;
-        }
+        scoreTextTagName = TagConstants.TAG_NAME_PLAYER_1_SCORE_TEXT;
+        pointTextTagName = TagConstants.TAG_NAME_PLAYER_1_POINTS_TEXT;
+        fieldTagName = TagConstants.TAG_NAME_PLAYER_1_FIELD;
 
         Vector3 fieldsize = ElementType.CalculateGameObjectMaxRange(GameObject.FindGameObjectWithTag(fieldTagName).transform.GetChild(0).gameObject);
 
         Vector3 foreseeWindowSize = ElementType.CalculateGameObjectMaxRange(GameObject.FindGameObjectWithTag(TagConstants.TAG_NAME_FORESEE_WINDOW).transform.GetChild(0).gameObject);
 
-        if (playerId == (int)GameManager.PlayerId.PLAYER_1)
-        {
-            scoreXposition = (foreseeWindowSize.x / 2) * -1;
-            pointsXposition = GameObject.FindGameObjectWithTag(fieldTagName).transform.position.x + (fieldsize.x / 2);
-        }
+       
+        scoreXposition = (foreseeWindowSize.x / 2) * -1;
+        pointsXposition = GameObject.FindGameObjectWithTag(fieldTagName).transform.position.x + (fieldsize.x / 2);
+       
 
         Vector3 scorePosition = new Vector3(
                 scoreXposition
@@ -156,6 +152,24 @@ public class ScoreManager : MonoBehaviour {
 
         RectTransform pointsTextRectTransform = this.PlayersPointText[playerId].GetComponent<RectTransform>();
         pointsTextRectTransform.position = pointsTextPosition;
+
+        int scoreTextfontSize = 0;
+        int pointTextfontSize = 0;
+
+        if (!ApplicationData.IsInMultiPlayerMode())
+        {
+            scoreTextfontSize = 30;
+            pointTextfontSize = 23;
+        }
+        else
+        {
+            scoreTextfontSize = 24;
+            pointTextfontSize = 22;
+        }
+
+        this.PlayersScoreText[playerId].fontSize = scoreTextfontSize;
+        this.PlayersPointText[playerId].fontSize = pointTextfontSize;
+
     }
 
     // Update is called once per frame

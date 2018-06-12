@@ -47,10 +47,18 @@ public class ObjectGroundColiderManager : MonoBehaviour
                     //test for the game over requirements
                     if (gameManagerScript.IsGameOver(parentPieceMovementScript.OwnerId))
                     {
-                        gameManagerScript.GameOver();
+                        gameManagerScript.GameOver(parentPieceMovementScript.OwnerId);
+
+                        int winnerId = parentPieceMovementScript.OwnerId == (int)GameManager.PlayerId.PLAYER_1 ? (int)GameManager.PlayerId.PLAYER_2 : (int)GameManager.PlayerId.PLAYER_1;
+                        gameManagerScript.DeclareWinner(winnerId);
                         return;
                     }
-                    gameManagerScript.PlayersSpawnAuthorisation[parentPieceMovementScript.OwnerId] = true;
+
+                    if(!gameManagerScript.Restart)
+                    {
+                        gameManagerScript.PlayersSpawnAuthorisation[parentPieceMovementScript.OwnerId] = true;
+                    }
+                    
                 }
             }
         }

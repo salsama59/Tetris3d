@@ -20,6 +20,7 @@ public class GameManager : MonoBehaviour {
     public GameObject foreseeWindow;
     public Text restartText;
     public Text gameOverText;
+    public Text winnerText;
     private bool restart;
     private ScoreManager scoreManagerScript;
     private int pieceId;
@@ -61,9 +62,10 @@ public class GameManager : MonoBehaviour {
         this.playersPiecesMovementSpeed.Add(playerId, INITIAL_PIECE_SPEED);
         this.playersCurrentGamePiece.Add(playerId, null);
         this.playersDeletingLinesState.Add(playerId, false);
-        this.restart = false;
-        this.restartText.text = "";
+        this.Restart = false;
         this.gameOverText.text = "";
+        this.restartText.text = "";
+        this.winnerText.text = "";
         this.DefineMapSize(playerId);
     }
 
@@ -120,9 +122,7 @@ public class GameManager : MonoBehaviour {
             , ForeseeWindow.transform.position.z
             );
 
-        playerField = Instantiate(GameField, fieldPosition, Quaternion.identity);
-        playerField.tag = fieldTagName;
-        playerForeseeWindow = Instantiate(ForeseeWindow, foreseeWindowPosition, ForeseeWindow.transform.rotation);
+        this.InstantiateFieldElements(out playerField, out playerForeseeWindow, fieldTagName, fieldPosition, foreseeWindowPosition);
     }
 
     private void PrepareGameFieldForOnePlayerMode(int playerId, out GameObject playerField, out GameObject playerForeseeWindow)
@@ -133,13 +133,10 @@ public class GameManager : MonoBehaviour {
 
         String fieldTagName = null;
 
-        if (playerId == (int)PlayerId.PLAYER_1)
-        {
-            fieldPositionX = 0f;
-            foreseeWindowPositionX = (foreseeWindowSize.x / 2) * -1;
-            fieldTagName = TagConstants.TAG_NAME_PLAYER_1_FIELD;
-        }
-        
+        fieldPositionX = 0f;
+        foreseeWindowPositionX = (foreseeWindowSize.x / 2) * -1;
+        fieldTagName = TagConstants.TAG_NAME_PLAYER_1_FIELD;
+
         Vector3 fieldPosition = new Vector3(
                 fieldPositionX
             , GameField.transform.position.y
@@ -151,6 +148,11 @@ public class GameManager : MonoBehaviour {
             , ForeseeWindow.transform.position.z
             );
 
+        this.InstantiateFieldElements(out playerField, out playerForeseeWindow, fieldTagName, fieldPosition, foreseeWindowPosition);
+    }
+
+    private void InstantiateFieldElements(out GameObject playerField, out GameObject playerForeseeWindow, string fieldTagName, Vector3 fieldPosition, Vector3 foreseeWindowPosition)
+    {
         playerField = Instantiate(GameField, fieldPosition, Quaternion.identity);
         playerField.tag = fieldTagName;
         playerForeseeWindow = Instantiate(ForeseeWindow, foreseeWindowPosition, ForeseeWindow.transform.rotation);
@@ -168,22 +170,25 @@ public class GameManager : MonoBehaviour {
     private void ManagePlayersFrame(int currentPlayerId)
     {
         
-        if (this.playersCurrentGamePiece[currentPlayerId] != null && !this.playersDeletingLinesState[currentPlayerId])
+        if(!this.Restart)
         {
-            this.FreezePiece(false, false, currentPlayerId);
+            if (this.playersCurrentGamePiece[currentPlayerId] != null && !this.playersDeletingLinesState[currentPlayerId])
+            {
+                this.FreezePiece(false, false, currentPlayerId);
+            }
+            else if (this.playersCurrentGamePiece[currentPlayerId] != null && this.playersDeletingLinesState[currentPlayerId])
+            {
+                this.FreezePiece(true, true, currentPlayerId);
+            }
         }
-        else if (this.playersCurrentGamePiece[currentPlayerId] != null && this.playersDeletingLinesState[currentPlayerId])
-        {
-            this.FreezePiece(true, true, currentPlayerId);
-        }
-
+        
         if (this.playersSpawnAuthorisation[currentPlayerId])
         {
             StartCoroutine(SpawnObjects(currentPlayerId));
             this.playersSpawnAuthorisation[currentPlayerId] = false;
         }
 
-        if (restart)
+        if (Restart)
         {
             if (Input.GetKeyDown(KeyCode.Return))
             {
@@ -197,7 +202,7 @@ public class GameManager : MonoBehaviour {
                 }
                 
             }
-            else if (Input.GetKeyDown(KeyCode.Space))
+            else if (Input.GetKeyDown(KeyCode.Escape))
             {
                 SceneManager.LoadScene(SceneConstants.SCENE_NAME_MAIN_MENU_SCENE);
             }
@@ -707,15 +712,63 @@ public class GameManager : MonoBehaviour {
 
     }
 
-    public void GameOver()
+    public void GameOver(int looserPlayerId)
     {
-        this.gameOverText.text = "Game Over";
-        this.restartText.text = "Press 'Return' for restart level \n";
-        this.restartText.text += "Press 'Space' to return to the main menu";
+        Vector3 gameOverTextPosition = CalculateTextScreenPositionToMiddleField(looserPlayerId, 0);
+
+        RectTransform gameOverTextRectTransform = this.gameOverText.GetComponent<RectTransform>();
+        gameOverTextRectTransform.position = gameOverTextPosition;
+
+        Vector3 restartTextPosition = CalculateTextScreenPositionToMiddleField(looserPlayerId, -6f);
+
+        RectTransform restartTextRectTransform = this.restartText.GetComponent<RectTransform>();
+        restartTextRectTransform.position = restartTextPosition;
+
+        this.gameOverText.text = "GAME OVER";
+        this.restartText.text = "Press 'Enter'\n for restart level\n";
+        this.restartText.text += "\nPress 'Escape'\n to return to the main menu";
         
-        this.restart = true;
+        this.Restart = true;
         this.gameOverText.gameObject.SetActive(true);
         this.restartText.gameObject.SetActive(true);
+    }
+
+    public void DeclareWinner(int winnerPlayerId)
+    {
+        Vector3 winnerTextPosition = CalculateTextScreenPositionToMiddleField(winnerPlayerId, 0f);
+
+        RectTransform winnerTextRectTransform = this.winnerText.GetComponent<RectTransform>();
+        winnerTextRectTransform.position = winnerTextPosition;
+
+        this.winnerText.text = "WINNER";
+        this.winnerText.gameObject.SetActive(true);
+        this.FreezePiece(true, true, winnerPlayerId);
+    }
+
+    private static Vector3 CalculateTextScreenPositionToMiddleField(int playerId, float offset)
+    {
+        String fieldTagName = null;
+
+        if (playerId == (int)GameManager.PlayerId.PLAYER_1)
+        {
+            fieldTagName = TagConstants.TAG_NAME_PLAYER_1_FIELD;
+        }
+        else if (playerId == (int)GameManager.PlayerId.PLAYER_2)
+        {
+            fieldTagName = TagConstants.TAG_NAME_PLAYER_2_FIELD;
+        }
+
+        GameObject field = GameObject.FindGameObjectWithTag(fieldTagName);
+
+        Vector3 fieldsize = ElementType.CalculateGameObjectMaxRange(field.transform.GetChild(0).gameObject);
+
+        Vector3 textTargetWorldPosition = new Vector3(
+              field.transform.position.x + fieldsize.x / 2
+            , 0.5f
+            , field.transform.position.z + fieldsize.z / 2 + offset);
+
+        Vector3 textScreenPosition = Camera.main.WorldToScreenPoint(textTargetWorldPosition);
+        return textScreenPosition;
     }
 
     public void CleanUpPieceObject(GameObject parent, int playerId)
@@ -838,6 +891,19 @@ public class GameManager : MonoBehaviour {
         set
         {
             foreseeWindow = value;
+        }
+    }
+
+    public bool Restart
+    {
+        get
+        {
+            return restart;
+        }
+
+        set
+        {
+            restart = value;
         }
     }
 }
