@@ -50,7 +50,11 @@ public class ObjectGroundColiderManager : MonoBehaviour
                         gameManagerScript.GameOver(parentPieceMovementScript.OwnerId);
 
                         int winnerId = parentPieceMovementScript.OwnerId == (int)GameManager.PlayerId.PLAYER_1 ? (int)GameManager.PlayerId.PLAYER_2 : (int)GameManager.PlayerId.PLAYER_1;
-                        gameManagerScript.DeclareWinner(winnerId);
+
+                        if (ApplicationData.IsInMultiPlayerMode())
+                        {
+                            gameManagerScript.DeclareWinner(winnerId);
+                        }
                         return;
                     }
 
@@ -72,48 +76,57 @@ public class ObjectGroundColiderManager : MonoBehaviour
 
     private void CorrectObjectPosition(GameObject objectColliding, int playerId, GameManager gameManager)
     {
+        bool isCorrected = false;
+
         PositionMapElement[,] positionMap = gameManager.PlayersPositionMap[playerId];
 
         for (int i = 0; i < positionMap.GetLength(0); i++)
         {
             for(int j = 0; j < positionMap.GetLength(1); j++)
             {
-                this.CorrectPlayerPiecePosition(objectColliding, playerId, gameManager, positionMap, i, j);
-            }
-        }
-    }
+                isCorrected = this.CorrectPlayerPiecePosition(objectColliding, playerId, gameManager, positionMap, i, j);
 
-    private void CorrectPlayerPiecePosition(GameObject objectColliding, int playerId, GameManager gameManager, PositionMapElement[,] positionMap, int i, int j)
-    {
-        float positionAdjustment = 0;
-        float posX = objectColliding.transform.position.x;
-
-        if (ApplicationData.IsInMultiPlayerMode())
-        {
-            this.CorrectPlayerPiecePositionForTwoPlayerMode(objectColliding, playerId, gameManager, positionMap, i, j, positionAdjustment, posX);
-        }
-        else
-        {
-            this.CorrectPlayerPiecePositionForOnePlayerMode(objectColliding, playerId, gameManager, positionMap, i, j, positionAdjustment, posX);
-        }
-    }
-
-    private void CorrectPlayerPiecePositionForOnePlayerMode(GameObject objectColliding, int playerId, GameManager gameManager, PositionMapElement[,] positionMap, int i, int j, float positionAdjustment, float posX)
-    {
-        if (playerId == (int)GameManager.PlayerId.PLAYER_1)
-        {
-            if (posX < j + 1 && posX > j)
-            {
-                if (objectColliding.transform.position.z < i + 1 && objectColliding.transform.position.z > i)
+                if(isCorrected)
                 {
-                    objectColliding.transform.position = positionMap[i, j].Position;
                     return;
                 }
             }
         }
     }
 
-    private void CorrectPlayerPiecePositionForTwoPlayerMode(GameObject objectColliding, int playerId, GameManager gameManager, PositionMapElement[,] positionMap, int i, int j, float positionAdjustment, float posX)
+    private bool CorrectPlayerPiecePosition(GameObject objectColliding, int playerId, GameManager gameManager, PositionMapElement[,] positionMap, int i, int j)
+    {
+        float positionAdjustment = 0;
+        float posX = objectColliding.transform.position.x;
+        bool isCorrected = false;
+
+        if (ApplicationData.IsInMultiPlayerMode())
+        {
+            isCorrected = this.CorrectPlayerPiecePositionForTwoPlayerMode(objectColliding, playerId, gameManager, positionMap, i, j, positionAdjustment, posX);
+        }
+        else
+        {
+            isCorrected = this.CorrectPlayerPiecePositionForOnePlayerMode(objectColliding, playerId, gameManager, positionMap, i, j, positionAdjustment, posX);
+        }
+
+        return isCorrected;
+    }
+
+    private bool CorrectPlayerPiecePositionForOnePlayerMode(GameObject objectColliding, int playerId, GameManager gameManager, PositionMapElement[,] positionMap, int i, int j, float positionAdjustment, float posX)
+    {
+        if (posX < j + 1 && posX > j)
+        {
+            if (objectColliding.transform.position.z < i + 1 && objectColliding.transform.position.z > i)
+            {
+                objectColliding.transform.position = positionMap[i, j].Position;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool CorrectPlayerPiecePositionForTwoPlayerMode(GameObject objectColliding, int playerId, GameManager gameManager, PositionMapElement[,] positionMap, int i, int j, float positionAdjustment, float posX)
     {
         positionAdjustment = -0.5f;
         if (posX < (gameManager.MapValueToPosition(j + 1, playerId) + positionAdjustment) && posX > (gameManager.MapValueToPosition(j, playerId) + positionAdjustment))
@@ -121,9 +134,11 @@ public class ObjectGroundColiderManager : MonoBehaviour
             if (objectColliding.transform.position.z < i + 1 && objectColliding.transform.position.z > i)
             {
                 objectColliding.transform.position = positionMap[i, j].Position;
-                return;
+                return true;
             }
         }
+
+        return false;
     }
 
     private void UpdateMapDatasForObject(GameObject parentObject, GameManager gameManagerScript, int playerId)
@@ -136,7 +151,7 @@ public class ObjectGroundColiderManager : MonoBehaviour
             int linePosition = (int)Math.Round(childTransform.position.z - 0.5f);
             int columnPosition = 0;
 
-            if (ApplicationData.playerNumber > 1)
+            if (ApplicationData.IsInMultiPlayerMode())
             {
                 columnPosition = gameManagerScript.PositionToMapValue(childTransform.position.x, playerId);
             }
@@ -144,7 +159,7 @@ public class ObjectGroundColiderManager : MonoBehaviour
             {
                 columnPosition = (int)Math.Round(childTransform.position.x - 0.5f);
             }
-            
+
             gameManagerScript.PlayersPositionMap[playerId][linePosition, columnPosition].IsOccupied = true;
             gameManagerScript.PlayersPositionMap[playerId][linePosition, columnPosition].CurrentMapElement = childTransform.gameObject;
             childTransform.gameObject.layer = LayerMask.NameToLayer(LayerConstants.LAYER_NAME_DESTROYABLE_PIECE);

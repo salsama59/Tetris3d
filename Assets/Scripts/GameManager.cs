@@ -10,7 +10,7 @@ public class GameManager : MonoBehaviour {
 
     public const float maxAllowedPlayableLine = 19.5f;
     public const float FIELD_MARGIN = 2f;
-    private const float INITIAL_PIECE_SPEED = 7f;
+    private const float INITIAL_PIECE_SPEED = 8f;
     public GameObject[] gamePiecesPool;
     public float startWait;
     public float spawnWait;
@@ -40,6 +40,15 @@ public class GameManager : MonoBehaviour {
         GameObject scoreManagerObject = GameObject.FindGameObjectWithTag(TagConstants.TAG_NAME_SCORE_MANAGER);
         this.scoreManagerScript = scoreManagerObject.GetComponent<ScoreManager>();
         this.InitialiseAllGameManagerElements();
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        for (int playerId = 0; playerId < ApplicationData.playerNumber; playerId++)
+        {
+            this.ManagePlayersFrame(playerId);
+        }
     }
 
     private void InitialiseAllGameManagerElements()
@@ -158,15 +167,6 @@ public class GameManager : MonoBehaviour {
         playerForeseeWindow = Instantiate(ForeseeWindow, foreseeWindowPosition, ForeseeWindow.transform.rotation);
     }
 
-    // Update is called once per frame
-    void Update ()
-    {
-        for(int playerId = 0; playerId < ApplicationData.playerNumber; playerId++)
-        {
-            this.ManagePlayersFrame(playerId);
-        }
-    }
-
     private void ManagePlayersFrame(int currentPlayerId)
     {
         
@@ -184,7 +184,7 @@ public class GameManager : MonoBehaviour {
         
         if (this.playersSpawnAuthorisation[currentPlayerId])
         {
-            StartCoroutine(SpawnObjects(currentPlayerId));
+            StartCoroutine(this.SpawnObjects(currentPlayerId));
             this.playersSpawnAuthorisation[currentPlayerId] = false;
         }
 
@@ -269,7 +269,7 @@ public class GameManager : MonoBehaviour {
         Vector3 instantiatePosition = new Vector3(
                 fieldsize.x / 2 + field.transform.position.x - 0.5f
                 , 0.5f
-                , fieldsize.z + field.transform.position.z);
+                , fieldsize.z + field.transform.position.z - 1.5f);
 
         GameObject instanciatedPiece = Instantiate(piece, instantiatePosition, Quaternion.identity);
 
@@ -418,7 +418,6 @@ public class GameManager : MonoBehaviour {
         {
             //position = i + tailles
             collumn = (int)((ElementType.CalculateGameObjectMaxRange(this.playersField[playerId].transform.GetChild(0).gameObject).x + FIELD_MARGIN - 0.5f) - (position * -1));
-
         }
         else if (playerId == (int)PlayerId.PLAYER_2)
         {
