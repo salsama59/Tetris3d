@@ -192,13 +192,7 @@ public class ScoreManager : MonoBehaviour {
 
         if(nbLine > 1)
         {
-            int counter = 0;
-
-            while(counter < nbLine)
-            {
-                points += 50;
-                counter++;
-            }
+            points = 50 * nbLine;
         }
 
         return points;

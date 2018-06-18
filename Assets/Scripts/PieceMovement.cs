@@ -22,7 +22,7 @@ public class PieceMovement : MonoBehaviour {
     // Use this for initialization
     void Start ()
     {
-        PieceRotationSpeed = 90f;
+        PieceRotationSpeed = 0.4f;
         gameManagerInstance = FindObjectOfType<GameManager>();
         IsMoving = true;
         this.gameObjectTransform = this.gameObject.GetComponent<Transform>();
@@ -186,13 +186,13 @@ public class PieceMovement : MonoBehaviour {
         }
 
         //Wanted rotation calculation 
-        Quaternion newrotation = Quaternion.Euler(Quaternion.identity.x, yAxeRotation, Quaternion.identity.z);
+        Quaternion newrotation = Quaternion.Euler(new Vector3(Quaternion.identity.x, yAxeRotation, Quaternion.identity.z));
         //The from rotation
         Quaternion originRotation = this.gameObjectTransform.rotation;
         //The to rotation
         Quaternion destinationRotation = originRotation * newrotation;
         //Rotate smoothly
-        this.gameObjectTransform.rotation = Quaternion.Slerp(originRotation, destinationRotation, Time.time * PieceRotationSpeed);
+        this.gameObjectTransform.rotation = Quaternion.Slerp(originRotation, destinationRotation, Mathf.Clamp(Time.time * PieceRotationSpeed, 0f, 1f));
     }
 
     private void MoveObjectToNewPosition(Vector3 newPosition)

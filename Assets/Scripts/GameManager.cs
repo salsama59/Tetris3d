@@ -464,12 +464,12 @@ public class GameManager : MonoBehaviour {
 
         foreach (KeyValuePair<int, List<GameObject>> objectsToDestroy in linesToDestroy)
         {
+            //Keep count of the current processed line id to calculate the right object position
+            processedLineCounter++;
             //Save the destroyed lines index for later use
             linesLimit.Add(objectsToDestroy.Key);
-            //Keep count of the current process line id to calculate the right object position
-            processedLineCounter++;
             //Call the coroutine for line destruction
-            StartCoroutine(this.SuppressLineRoutine(linesToDestroy, objectsToDestroy, numberOfLinesToDestroy, processedLineCounter, playerId));
+            StartCoroutine(this.SuppressLineRoutine(linesToDestroy.Keys.Last(), objectsToDestroy, numberOfLinesToDestroy, processedLineCounter, playerId));
             //Errase datas about the suppressed lines in the position map
             this.UpdateSuppressedLinesInPositionMap(objectsToDestroy.Key, playerId);
         }
@@ -480,16 +480,17 @@ public class GameManager : MonoBehaviour {
             this.UpdatePositionMapForNewPiecesPosition(lineLimit, playerId);
         }
 
+        //Display new calculated score
+        this.scoreManagerScript.AddPlayerPointAmountToScore(numberOfLinesToDestroy, playerId);
+
     }
 
-    IEnumerator SuppressLineRoutine(SortedDictionary<int, List<GameObject>> linesToDestroy, KeyValuePair<int, List<GameObject>> objectsToDestroy, int numberOfLinesToDestroy, int processedLineCounter, int playerId)
+    IEnumerator SuppressLineRoutine(int linesToDestroyLastKey, KeyValuePair<int, List<GameObject>> objectsToDestroy, int numberOfLinesToDestroy, int processedLineCounter, int playerId)
     {
-
+        //Set to disable somme fonctionnality while deleting lines
         this.playersDeletingLinesState[playerId] = true;
-        //Display the current amount of points earned for the line break
-        this.scoreManagerScript.DisplayEarnedPoints(numberOfLinesToDestroy, linesToDestroy.Keys.Last(), playerId);
-        //Keep count of the current process line id to calculate the right object position
-        processedLineCounter++;
+        //Display the current amount of points earned near the last line that will be breaked
+        this.scoreManagerScript.DisplayEarnedPoints(numberOfLinesToDestroy, linesToDestroyLastKey, playerId);
         //Destroy one line
         yield return this.DestroyObjectLine(objectsToDestroy, processedLineCounter, numberOfLinesToDestroy, playerId);
         
@@ -607,8 +608,6 @@ public class GameManager : MonoBehaviour {
 
         //Hide the line break earned points
         this.scoreManagerScript.PlayersPointText[playerId].gameObject.SetActive(false);
-        //Display new calculated score
-        this.scoreManagerScript.AddPlayerPointAmountToScore(numberOfLinesToDestroy, playerId);
         this.playersDeletingLinesState[playerId] = false;
         this.TogglePieceChildObjectCollider(true, playerId);
 
@@ -619,20 +618,13 @@ public class GameManager : MonoBehaviour {
 
     IEnumerator LowerPiecePosition(GameObject currentObject, Vector3 positionGap)
     {
-        float targetPosition = currentObject.transform.position.z + positionGap.z;
-        while (true)
-        {
-            yield return new WaitForSeconds(0.06f);
 
-            Vector3 newCalculatedPosition = currentObject.transform.position + positionGap;
+        float timeWaiting = 0.5f;
 
-            currentObject.transform.position = Vector3.MoveTowards(currentObject.transform.position, newCalculatedPosition, 0.5f);
-
-            if (currentObject.transform.position.z <= targetPosition)
-            {
-                yield break;
-            }
-        }
+        Vector3 newCalculatedPosition = currentObject.transform.position + positionGap;
+        currentObject.transform.position = newCalculatedPosition;
+       
+        yield return new WaitForSecondsRealtime(timeWaiting);
     }
 
     private void UpdatePositionMapForNewPiecesPosition(int lineLimit, int playerId)
