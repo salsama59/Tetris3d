@@ -7,92 +7,230 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class GameManager : MonoBehaviour {
+
     public const float maxAllowedPlayableLine = 19.5f;
-    public GameObject[] objects;
+    public const float FIELD_MARGIN = 2f;
+    private const float INITIAL_PIECE_SPEED = 8f;
+    public GameObject[] gamePiecesPool;
     public float startWait;
     public float spawnWait;
-    public Vector3 spawnPosition;
-    private bool isReadyToSpawnObject;
     public GameObject horizontalLine;
     public GameObject verticalLine;
-    private PositionMapElement[,] map;
     public GameObject gameField;
     public GameObject foreseeWindow;
-    //nullable int shorthand
-    private int? nextObjectIndex = null;
     public Text restartText;
     public Text gameOverText;
+    public Text winnerText;
     private bool restart;
-    public Transform backgroundTransform;
     private ScoreManager scoreManagerScript;
     private int pieceId;
-    public float pieceMovementSpeed;
     public GameObject explosionEffects;
-    private GameObject currentGamePiece;
-    private bool isDeletingLines;
+    private Dictionary<int, GameObject> playersField = new Dictionary<int, GameObject>();
+    private Dictionary<int, GameObject> playersForeSeeWindow = new Dictionary<int, GameObject>();
+    private Dictionary<int, bool> playersSpawnAuthorisation = new Dictionary<int, bool>();
+    private Dictionary<int, int?> playersNextObjectIndex = new Dictionary<int, int?>();
+    private Dictionary<int, PositionMapElement[,]> playersPositionMap = new Dictionary<int, PositionMapElement[,]>();
+    private Dictionary<int, float> playersPiecesMovementSpeed = new Dictionary<int, float>();
+    private Dictionary<int, GameObject> playersCurrentGamePiece = new Dictionary<int, GameObject>();
+    private Dictionary<int, bool> playersDeletingLinesState = new Dictionary<int, bool>();
+    public enum PlayerId {PLAYER_1, PLAYER_2};
 
     private void Start()
     {
-        this.restart = false;
-        this.restartText.text = "";
-        this.gameOverText.text = "";
-        Instantiate(gameField, new Vector3(), Quaternion.identity);
-        Instantiate(foreseeWindow, foreseeWindow.transform.position, Quaternion.identity);
-        IsReadyToSpawnObject = true;
-        this.DefineMapSize();
-        //this.BuildFieldGrid();
-        this.CreatePositionMap();
-        GameObject scoreManagerObject = GameObject.FindGameObjectWithTag("ScoreManager");
-        scoreManagerScript = scoreManagerObject.GetComponent<ScoreManager>();
-        scoreManagerScript.ScoreText.gameObject.SetActive(true);
+        GameObject scoreManagerObject = GameObject.FindGameObjectWithTag(TagConstants.TAG_NAME_SCORE_MANAGER);
+        this.scoreManagerScript = scoreManagerObject.GetComponent<ScoreManager>();
+        this.InitialiseAllGameManagerElements();
     }
 
     // Update is called once per frame
-    void Update () {
-
-        if (CurrentGamePiece != null && !IsDeletingLines)
+    void Update()
+    {
+        for (int playerId = 0; playerId < ApplicationData.playerNumber; playerId++)
         {
-            this.FreezePiece(false, false);
+            this.ManagePlayersFrame(playerId);
         }
-        else if (CurrentGamePiece != null && IsDeletingLines)
+    }
+
+    private void InitialiseAllGameManagerElements()
+    {
+        
+        for(int playerId = 0; playerId < ApplicationData.playerNumber; playerId++)
         {
-            this.FreezePiece(true, true);
+            this.InitialiseGameManagerProperties(playerId);
+            this.PrepareGameField(playerId);
+            //this.BuildFieldGrid(playerId);
+            this.CreatePositionMap(playerId);
+        }
+        
+    }
+
+    private void InitialiseGameManagerProperties(int playerId)
+    {
+        this.playersSpawnAuthorisation.Add(playerId, true);
+        this.playersNextObjectIndex.Add(playerId, null);
+        this.playersPiecesMovementSpeed.Add(playerId, INITIAL_PIECE_SPEED);
+        this.playersCurrentGamePiece.Add(playerId, null);
+        this.playersDeletingLinesState.Add(playerId, false);
+        this.Restart = false;
+        this.gameOverText.text = "";
+        this.restartText.text = "";
+        this.winnerText.text = "";
+        this.DefineMapSize(playerId);
+    }
+
+    private void PrepareGameField(int playerId)
+    {
+        GameObject playerField, playerForeseeWindow;
+
+        if(ApplicationData.IsInMultiPlayerMode())
+        {
+            this.PrepareGameFieldForTwoPlayerMode(playerId, out playerField, out playerForeseeWindow);
+        }
+        else
+        {
+            this.PrepareGameFieldForOnePlayerMode(playerId, out playerField, out playerForeseeWindow);
+        }
+        
+        this.playersField.Add(playerId, playerField);
+        this.playersForeSeeWindow.Add(playerId, playerForeseeWindow);
+
+    }
+
+    private void PrepareGameFieldForTwoPlayerMode(int playerId, out GameObject playerField, out GameObject playerForeseeWindow)
+    {
+        float fieldPositionX = 0f;
+        float foreseeWindowPositionX = 0f;
+
+        Vector3 fieldsize = ElementType.CalculateGameObjectMaxRange(GameField.transform.GetChild(0).gameObject);
+
+        Vector3 foreseeWindowSize = ElementType.CalculateGameObjectMaxRange(ForeseeWindow.transform.GetChild(0).gameObject);
+
+        String fieldTagName = null;
+
+        if (playerId == (int)PlayerId.PLAYER_1)
+        {
+            fieldPositionX = (fieldsize.x + FIELD_MARGIN) * -1;
+            foreseeWindowPositionX = (FIELD_MARGIN + fieldsize.x + foreseeWindowSize.x / 2) * -1;
+            fieldTagName = TagConstants.TAG_NAME_PLAYER_1_FIELD;
+        }
+        else if (playerId == (int)PlayerId.PLAYER_2)
+        {
+            fieldPositionX = foreseeWindowSize.x + FIELD_MARGIN;
+            foreseeWindowPositionX = FIELD_MARGIN + foreseeWindowSize.x / 2;
+            fieldTagName = TagConstants.TAG_NAME_PLAYER_2_FIELD;
         }
 
-        if (IsReadyToSpawnObject)
+        Vector3 fieldPosition = new Vector3(
+                fieldPositionX
+            , GameField.transform.position.y
+            , GameField.transform.position.z
+            );
+        Vector3 foreseeWindowPosition = new Vector3(
+            foreseeWindowPositionX
+            , ForeseeWindow.transform.position.y
+            , ForeseeWindow.transform.position.z
+            );
+
+        this.InstantiateFieldElements(out playerField, out playerForeseeWindow, fieldTagName, fieldPosition, foreseeWindowPosition);
+    }
+
+    private void PrepareGameFieldForOnePlayerMode(int playerId, out GameObject playerField, out GameObject playerForeseeWindow)
+    {
+        float fieldPositionX = 0f;
+        float foreseeWindowPositionX = 0f;
+        Vector3 foreseeWindowSize = ElementType.CalculateGameObjectMaxRange(ForeseeWindow.transform.GetChild(0).gameObject);
+
+        String fieldTagName = null;
+
+        fieldPositionX = 0f;
+        foreseeWindowPositionX = (foreseeWindowSize.x / 2) * -1;
+        fieldTagName = TagConstants.TAG_NAME_PLAYER_1_FIELD;
+
+        Vector3 fieldPosition = new Vector3(
+                fieldPositionX
+            , GameField.transform.position.y
+            , GameField.transform.position.z
+            );
+        Vector3 foreseeWindowPosition = new Vector3(
+            foreseeWindowPositionX
+            , ForeseeWindow.transform.position.y
+            , ForeseeWindow.transform.position.z
+            );
+
+        this.InstantiateFieldElements(out playerField, out playerForeseeWindow, fieldTagName, fieldPosition, foreseeWindowPosition);
+    }
+
+    private void InstantiateFieldElements(out GameObject playerField, out GameObject playerForeseeWindow, string fieldTagName, Vector3 fieldPosition, Vector3 foreseeWindowPosition)
+    {
+        playerField = Instantiate(GameField, fieldPosition, Quaternion.identity);
+        playerField.tag = fieldTagName;
+        playerForeseeWindow = Instantiate(ForeseeWindow, foreseeWindowPosition, ForeseeWindow.transform.rotation);
+    }
+
+    private void ManagePlayersFrame(int currentPlayerId)
+    {
+        
+        if(!this.Restart)
         {
-            StartCoroutine(SpawnObjects());
-            IsReadyToSpawnObject = false;
+            if (this.playersCurrentGamePiece[currentPlayerId] != null && !this.playersDeletingLinesState[currentPlayerId])
+            {
+                this.FreezePiece(false, false, currentPlayerId);
+            }
+            else if (this.playersCurrentGamePiece[currentPlayerId] != null && this.playersDeletingLinesState[currentPlayerId])
+            {
+                this.FreezePiece(true, true, currentPlayerId);
+            }
+        }
+        
+        if (this.playersSpawnAuthorisation[currentPlayerId])
+        {
+            StartCoroutine(this.SpawnObjects(currentPlayerId));
+            this.playersSpawnAuthorisation[currentPlayerId] = false;
         }
 
-        if (restart)
+        if (Restart)
         {
             if (Input.GetKeyDown(KeyCode.Return))
             {
-                SceneManager.LoadScene("One_Player_Mode_Game_Scene");
+                if(!ApplicationData.IsInMultiPlayerMode())
+                {
+                    SceneManager.LoadScene(SceneConstants.SCENE_NAME_ONE_PLAYER_MODE);
+                }
+                else
+                {
+                    SceneManager.LoadScene(SceneConstants.SCENE_NAME_TWO_PLAYER_MODE);
+                }
+                
             }
-            else if(Input.GetKeyDown(KeyCode.Space))
+            else if (Input.GetKeyDown(KeyCode.Escape))
             {
-                SceneManager.LoadScene("Main_Menu_Scene");
+                SceneManager.LoadScene(SceneConstants.SCENE_NAME_MAIN_MENU_SCENE);
             }
         }
-
     }
 
-    private void FreezePiece(bool isPieceMoving, bool pieceKinematicState)
+    private void FreezePiece(bool isPieceMoving, bool pieceKinematicState, int playerId)
     {
-        PieceMovement pieceMovementScript = CurrentGamePiece.GetComponent<PieceMovement>();
+        PieceMovement pieceMovementScript = this.playersCurrentGamePiece[playerId].GetComponent<PieceMovement>();
         pieceMovementScript.IsMoving = isPieceMoving == false? true : false;
-        Rigidbody currentPieceRigidBody = CurrentGamePiece.GetComponent<Rigidbody>();
+        Rigidbody currentPieceRigidBody = this.playersCurrentGamePiece[playerId].GetComponent<Rigidbody>();
         currentPieceRigidBody.isKinematic = pieceKinematicState;
     }
 
-    IEnumerator SpawnObjects()
+    IEnumerator SpawnObjects(int playerId)
     {
         yield return new WaitForSeconds(startWait);
         GameObject piece = null;
+        GameObject foreseePieceObject = null;
 
-        GameObject foreseePieceObject = GameObject.FindGameObjectWithTag("ForeseePiece");
+        if((int)PlayerId.PLAYER_1 == playerId)
+        {
+            foreseePieceObject = GameObject.FindGameObjectWithTag(TagConstants.TAG_NAME_PLAYER_1_FORESEE_PIECE);
+        }
+        else if((int)PlayerId.PLAYER_2 == playerId)
+        {
+            foreseePieceObject = GameObject.FindGameObjectWithTag(TagConstants.TAG_NAME_PLAYER_2_FORESEE_PIECE);
+        }
 
         //Destroy the former foreseen piece before displaying the new one if it exists
         if(foreseePieceObject != null)
@@ -101,60 +239,72 @@ public class GameManager : MonoBehaviour {
         }
 
         //Choose the object to instantiate either the current foreseen or a fresh new one (from start)
-        if (this.nextObjectIndex == null)
+        if (this.playersNextObjectIndex[playerId] == null)
         {
-            piece = objects[UnityEngine.Random.Range(0, objects.Length)];
+            piece = gamePiecesPool[UnityEngine.Random.Range(0, gamePiecesPool.Length)];
         }
         else
         {
-            piece = objects[(int)this.nextObjectIndex];
+            piece = gamePiecesPool[(int)this.playersNextObjectIndex[playerId]];
         }
-        //Calculate initial rotation
-        Quaternion spawnRotation = Quaternion.identity;
 
         //Manage the gameField object
-        this.ManageGameFieldObject(piece, spawnRotation);
+        this.ManageGameFieldObject(piece, playerId);
 
         //Manage the foreseen object
-        this.ManageForeseeObject(spawnRotation);
+        this.ManageForeseeObject(playerId);
        
         yield return new WaitForSeconds(spawnWait);
     }
 
-    private void ManageGameFieldObject(GameObject piece, Quaternion spawnRotation)
+    private void ManageGameFieldObject(GameObject piece, int playerId)
     {
         PieceMovement pieceMovementScript = piece.GetComponent<PieceMovement>();
+        pieceMovementScript.OwnerId = playerId;
 
-        GameObject field = GameObject.FindGameObjectWithTag("Background");
+        GameObject field = this.playersField[playerId];
         pieceMovementScript.Field = field;
+        Vector3 fieldsize = ElementType.CalculateGameObjectMaxRange(field.transform.transform.GetChild(0).gameObject);
 
+        Vector3 instantiatePosition = new Vector3(
+                fieldsize.x / 2 + field.transform.position.x - 0.5f
+                , 0.5f
+                , fieldsize.z + field.transform.position.z - 1.5f);
 
-        GameObject instanciatedPiece = Instantiate(piece, spawnPosition, spawnRotation);
+        GameObject instanciatedPiece = Instantiate(piece, instantiatePosition, Quaternion.identity);
 
         //Update parent piece name and the children too thank to the pieceId
         this.UpdatePiecesName(instanciatedPiece);
-
-        CurrentGamePiece = instanciatedPiece;
+        this.UpdatePieceChildrenTagName(playerId, instanciatedPiece);
+        this.playersCurrentGamePiece[playerId] = instanciatedPiece;
 
     }
 
-    private void ManageForeseeObject(Quaternion spawnRotation)
+    private void ManageForeseeObject(int playerId)
     {
         GameObject foreseePiece = null;
+        GameObject foreseeWindow = this.playersForeSeeWindow[playerId];
         //Randomly select the foreseenObject
-        this.nextObjectIndex = UnityEngine.Random.Range(0, objects.Length);
-        foreseePiece = objects[(int)this.nextObjectIndex];
+        this.playersNextObjectIndex[playerId] = UnityEngine.Random.Range(0, gamePiecesPool.Length);
+        foreseePiece = gamePiecesPool[(int)this.playersNextObjectIndex[playerId]];
 
         Vector3 foreseePiecePosition = new Vector3(
             foreseeWindow.transform.position.x,
             0.5f,
             foreseeWindow.transform.position.z);
 
-        GameObject instantiateForeseeObject = Instantiate(foreseePiece, foreseePiecePosition, spawnRotation);
+        GameObject instantiateForeseeObject = Instantiate(foreseePiece, foreseePiecePosition, Quaternion.identity);
         Transform[] childrensTransform =  instantiateForeseeObject.GetComponentsInChildren<Transform>();
         foreach (Transform childTransform in childrensTransform)
         {
-            childTransform.gameObject.tag = "ForeseePiece";
+            if(playerId == (int)PlayerId.PLAYER_1)
+            {
+                childTransform.gameObject.tag = TagConstants.TAG_NAME_PLAYER_1_FORESEE_PIECE;
+            }
+            else if(playerId == (int)PlayerId.PLAYER_2)
+            {
+                childTransform.gameObject.tag = TagConstants.TAG_NAME_PLAYER_2_FORESEE_PIECE;
+            }
         }
         PieceMovement instantiateForeseeObjectPieceMovementScript = instantiateForeseeObject.GetComponent<PieceMovement>();
         instantiateForeseeObjectPieceMovementScript.enabled = false;
@@ -163,9 +313,32 @@ public class GameManager : MonoBehaviour {
         foreseePieceRigidBody.detectCollisions = false;
     }
 
-    private void BuildFieldGrid()
+    private void UpdatePieceChildrenTagName(int playerId, GameObject instanciatedPiece)
     {
-        Vector3 maxRange = GetFieldMaxRange(backgroundTransform);
+        Transform[] childTransforms = instanciatedPiece.GetComponentsInChildren<Transform>().Where(childTransform => childTransform.gameObject != instanciatedPiece).ToArray();
+
+        String targetTagName = null;
+
+        if (playerId == (int)PlayerId.PLAYER_1)
+        {
+            targetTagName = TagConstants.TAG_NAME_PLAYER_1_PIECE_CHILD;
+        }
+        else if (playerId == (int)PlayerId.PLAYER_2)
+        {
+            targetTagName = TagConstants.TAG_NAME_PLAYER_2_PIECE_CHILD;
+        }
+
+        foreach (Transform transform in childTransforms)
+        {
+            transform.gameObject.tag = targetTagName;
+        }
+    }
+
+    private void BuildFieldGrid(int playerId)
+    {
+        GameObject fieldBackground = this.playersField[playerId].transform.GetChild(0).gameObject;
+
+        Vector3 maxRange = ElementType.CalculateGameObjectMaxRange(fieldBackground);
         //Calcul the halfsize of the field
         maxRange.x *= 0.5f;
         maxRange.y *= 0.5f;
@@ -174,15 +347,15 @@ public class GameManager : MonoBehaviour {
         Vector3 minRange = new Vector3(maxRange.x * -1, maxRange.y * -1, maxRange.z * -1);
 
 
-        for (float i = minRange.x + backgroundTransform.position.x; i < maxRange.x + backgroundTransform.position.x; i++)
+        for (float i = minRange.x + fieldBackground.transform.position.x; i < maxRange.x + fieldBackground.transform.position.x; i++)
         {
 
             Vector3 objectPosition = new Vector3(0f, 0f, 0f);
             GameObject line = Instantiate(verticalLine, objectPosition, Quaternion.identity);
 
-            Vector3 lineVerticePosition1 = new Vector3(i, 0.5f, maxRange.z + backgroundTransform.position.z);
+            Vector3 lineVerticePosition1 = new Vector3(i, 0.5f, maxRange.z + fieldBackground.transform.position.z);
 
-            Vector3 lineVerticePosition2 = new Vector3(i, 0.5f, minRange.z + backgroundTransform.position.z);
+            Vector3 lineVerticePosition2 = new Vector3(i, 0.5f, minRange.z + fieldBackground.transform.position.z);
 
             LineRenderer lineRenderer = line.GetComponent<LineRenderer>();
 
@@ -190,14 +363,14 @@ public class GameManager : MonoBehaviour {
             lineRenderer.SetPosition(1, lineVerticePosition2);
         }
 
-        for (float i = minRange.z + backgroundTransform.position.z; i < maxRange.z + backgroundTransform.position.z; i++)
+        for (float i = minRange.z + fieldBackground.transform.position.z; i < maxRange.z + fieldBackground.transform.position.z; i++)
         {
-            Vector3 objectPosition = new Vector3(0f, 0f, 0f);
+            Vector3 objectPosition = Vector3.zero;
             GameObject line = Instantiate(horizontalLine, objectPosition, Quaternion.identity);
 
-            Vector3 lineVerticePosition1 = new Vector3(maxRange.x + backgroundTransform.position.x, 0.5f, i);
+            Vector3 lineVerticePosition1 = new Vector3(maxRange.x + fieldBackground.transform.position.x, 0.5f, i);
 
-            Vector3 lineVerticePosition2 = new Vector3(minRange.x + backgroundTransform.position.x, 0.5f, i);
+            Vector3 lineVerticePosition2 = new Vector3(minRange.x + fieldBackground.transform.position.x, 0.5f, i);
 
             LineRenderer lineRenderer = line.GetComponent<LineRenderer>();
 
@@ -207,43 +380,74 @@ public class GameManager : MonoBehaviour {
 
     }
 
-    private void CreatePositionMap()
+    private void CreatePositionMap(int playerId)
     {
-        Vector3 maxRange = GetFieldMaxRange(backgroundTransform);
+        Vector3 maxRange = ElementType.CalculateGameObjectMaxRange(GameField.transform.GetChild(0).gameObject);
         for (int k = 0; k < Mathf.RoundToInt(maxRange.z); k++)
         {
             for (int l = 0; l < Mathf.RoundToInt(maxRange.x); l++)
             {
-                GameMap[k, l] = new PositionMapElement (new Vector3(l + 0.5f, 0.5f, k + 0.5f), false);
+                float mapElementXposition = 0;
+
+                if(ApplicationData.IsInMultiPlayerMode())
+                {
+                    mapElementXposition = MapValueToPosition(l, playerId);
+                }
+                else
+                {
+                    mapElementXposition = l + 0.5f;
+                }
+                
+                this.PlayersPositionMap[playerId][k, l] = new PositionMapElement (new Vector3(mapElementXposition, 0.5f, k + 0.5f), false);
             }
         }
 
     }
 
-    private Vector3 GetFieldMaxRange(Transform backgroundTransform)
+    private void DefineMapSize(int playerId)
     {
-
-        Vector3 objectSize = backgroundTransform.position;
-        Vector3 objectScale = backgroundTransform.localScale;
-        Vector3 maxRange = new Vector3(
-            objectSize.x * objectScale.x,
-            objectSize.y * objectScale.y,
-            objectSize.z * objectScale.z
-            );
-        return maxRange;
-    }
-
-    private void DefineMapSize()
-    {
-        Vector3 maxRange = GetFieldMaxRange(backgroundTransform);
+        Vector3 maxRange = ElementType.CalculateGameObjectMaxRange(GameField.transform.GetChild(0).gameObject);
         //Initialise the position matrix for the game elements [lines, collumns]
-        GameMap = new PositionMapElement[Mathf.RoundToInt(maxRange.z), Mathf.RoundToInt(maxRange.x)];
+        this.PlayersPositionMap[playerId] = new PositionMapElement[Mathf.RoundToInt(maxRange.z), Mathf.RoundToInt(maxRange.x)];
     }
 
-    public void DestroyObjectLines()
+    public int PositionToMapValue(float position, int playerId)
+    {
+        int collumn = 0;
+        if (playerId == (int)PlayerId.PLAYER_1)
+        {
+            //position = i + tailles
+            collumn = (int)((ElementType.CalculateGameObjectMaxRange(this.playersField[playerId].transform.GetChild(0).gameObject).x + FIELD_MARGIN - 0.5f) - (position * -1));
+        }
+        else if (playerId == (int)PlayerId.PLAYER_2)
+        {
+            //position = i + tailles
+            collumn = (int)(position - (ElementType.CalculateGameObjectMaxRange(this.playersForeSeeWindow[playerId].transform.GetChild(0).gameObject).x + FIELD_MARGIN + 0.5f));
+        }
+
+        return collumn;
+    }
+
+    public float MapValueToPosition(int mapValue, int playerId)
+    {
+        float position = 0;
+        if (playerId == (int)PlayerId.PLAYER_1)
+        {
+            position = -1 * (ElementType.CalculateGameObjectMaxRange(this.playersField[playerId].transform.GetChild(0).gameObject).x - mapValue + FIELD_MARGIN - 0.5f);
+
+        }
+        else if (playerId == (int)PlayerId.PLAYER_2)
+        {
+            position = mapValue + ElementType.CalculateGameObjectMaxRange(this.playersForeSeeWindow[playerId].transform.GetChild(0).gameObject).x + FIELD_MARGIN + 0.5f;
+        }
+
+        return position;
+    }
+
+    public void DestroyObjectLines(int playerId)
     {
         //Retrieve lines to destroy
-        SortedDictionary<int, List<GameObject>> linesToDestroy = this.FetchLinesToDestroy();
+        SortedDictionary<int, List<GameObject>> linesToDestroy = this.FetchLinesToDestroy(playerId);
 
         int numberOfLinesToDestroy = linesToDestroy.Count;
 
@@ -256,42 +460,43 @@ public class GameManager : MonoBehaviour {
 
         int processedLineCounter = 0;
 
-        this.TogglePieceChildObjectCollider(false);
+        this.TogglePieceChildObjectCollider(false, playerId);
 
         foreach (KeyValuePair<int, List<GameObject>> objectsToDestroy in linesToDestroy)
         {
+            //Keep count of the current processed line id to calculate the right object position
+            processedLineCounter++;
             //Save the destroyed lines index for later use
             linesLimit.Add(objectsToDestroy.Key);
-            //Keep count of the current process line id to calculate the right object position
-            processedLineCounter++;
             //Call the coroutine for line destruction
-            StartCoroutine(this.SuppressLineRoutine(linesToDestroy, objectsToDestroy, numberOfLinesToDestroy, processedLineCounter));
+            StartCoroutine(this.SuppressLineRoutine(linesToDestroy.Keys.Last(), objectsToDestroy, numberOfLinesToDestroy, processedLineCounter, playerId));
             //Errase datas about the suppressed lines in the position map
-            this.UpdateSuppressedLinesInPositionMap(objectsToDestroy.Key);
+            this.UpdateSuppressedLinesInPositionMap(objectsToDestroy.Key, playerId);
         }
 
         foreach (int lineLimit in linesLimit)
         {
             //The position map should be updated to impact the pieces new positions after going down by numberOfLinesToDestroy
-            this.UpdatePositionMapForNewPiecesPosition(lineLimit);
+            this.UpdatePositionMapForNewPiecesPosition(lineLimit, playerId);
         }
+
+        //Display new calculated score
+        this.scoreManagerScript.AddPlayerPointAmountToScore(numberOfLinesToDestroy, playerId);
 
     }
 
-    IEnumerator SuppressLineRoutine(SortedDictionary<int, List<GameObject>> linesToDestroy, KeyValuePair<int, List<GameObject>> objectsToDestroy, int numberOfLinesToDestroy, int processedLineCounter)
+    IEnumerator SuppressLineRoutine(int linesToDestroyLastKey, KeyValuePair<int, List<GameObject>> objectsToDestroy, int numberOfLinesToDestroy, int processedLineCounter, int playerId)
     {
-
-        IsDeletingLines = true;
-        //Display the current amount of points earned for the line break
-        this.scoreManagerScript.DisplayEarnedPoints(numberOfLinesToDestroy, linesToDestroy.Keys.Last());
-        //Keep count of the current process line id to calculate the right object position
-        processedLineCounter++;
+        //Set to disable somme fonctionnality while deleting lines
+        this.playersDeletingLinesState[playerId] = true;
+        //Display the current amount of points earned near the last line that will be breaked
+        this.scoreManagerScript.DisplayEarnedPoints(numberOfLinesToDestroy, linesToDestroyLastKey, playerId);
         //Destroy one line
-        yield return this.DestroyObjectLine(objectsToDestroy, processedLineCounter, numberOfLinesToDestroy);
+        yield return this.DestroyObjectLine(objectsToDestroy, processedLineCounter, numberOfLinesToDestroy, playerId);
         
     }
 
-    IEnumerator DestroyObjectLine(KeyValuePair<int, List<GameObject>> objectsToDestroy, int processedLineCounter, int numberOfLinesToDestroy)
+    IEnumerator DestroyObjectLine(KeyValuePair<int, List<GameObject>> objectsToDestroy, int processedLineCounter, int numberOfLinesToDestroy, int playerId)
     {
 
         List<GameObject> sortedObjectsToDestroyList = objectsToDestroy.Value.OrderBy(
@@ -306,70 +511,80 @@ public class GameManager : MonoBehaviour {
         }
 
         //All the relevant pieces going down by one square
-        yield return this.MovePiecesDown(objectsToDestroy.Key, processedLineCounter, numberOfLinesToDestroy);
+        yield return this.MovePiecesDown(objectsToDestroy.Key, processedLineCounter, numberOfLinesToDestroy, playerId);
     }
 
-    public void WaitCoroutine(IEnumerator func)
-    {
-        while (func.MoveNext())
-        {
-            if (func.Current != null)
-            {
-                IEnumerator num;
-                try
-                {
-                    num = (IEnumerator)func.Current;
-                }
-                catch (InvalidCastException)
-                {
-                    if (func.Current.GetType() == typeof(WaitForSeconds))
-                        Debug.LogWarning("Skipped call to WaitForSeconds. Use WaitForSecondsRealtime instead.");
-                    return;  // Skip WaitForSeconds, WaitForEndOfFrame and WaitForFixedUpdate
-                }
-                WaitCoroutine(num);
-            }
-        }
-    }
-
-    private SortedDictionary<int, List<GameObject>> FetchLinesToDestroy()
+    private SortedDictionary<int, List<GameObject>> FetchLinesToDestroy(int playerId)
     {
         //Sort the line to destroy by line number
         SortedDictionary<int, List<GameObject>> totalObjectListToDestroy = new SortedDictionary<int, List<GameObject>>();
 
-        for(int i = 0; i < (int)(maxAllowedPlayableLine + 0.5f); i++)
+        String targetTagName = null;
+
+        if (playerId == (int)PlayerId.PLAYER_1)
+        {
+            targetTagName = TagConstants.TAG_NAME_PLAYER_1_PIECE_CHILD;
+        }
+        else if (playerId == (int)PlayerId.PLAYER_2)
+        {
+            targetTagName = TagConstants.TAG_NAME_PLAYER_2_PIECE_CHILD;
+        }
+
+        for (int i = 0; i < (int)(maxAllowedPlayableLine + 0.5f); i++)
         {
             //Find the game object on the current map line
-            GameObject[] listToDestroy = GameObject.FindGameObjectsWithTag("PieceChild")
-                .Where(pieceChildObject => this.IsGameObjectOnLine(ref pieceChildObject, i))
+            GameObject[] listToDestroy = GameObject.FindGameObjectsWithTag(targetTagName)
+                .Where(pieceChildObject => this.IsGameObjectOnLine(pieceChildObject, i, playerId))
                 .ToArray();
-            //If the gameObject unmber match the field width it is a complete destroyable line
-            if (this.GameMap.GetLength(1) == listToDestroy.Length)
+            //If the gameObject number match the field width it is a complete destroyable line
+            if (this.PlayersPositionMap[playerId].GetLength(1) == listToDestroy.Length)
             {
                 totalObjectListToDestroy.Add(i, listToDestroy.ToList());
             }
-
         }
 
         return totalObjectListToDestroy;
     }
 
-    private bool IsGameObjectOnLine(ref GameObject targetObject, int lineNumber)
+    private bool IsGameObjectOnLine(GameObject targetObject, int lineNumber, int playerId)
     {
         int? targetObjectLineNumber = null;
-        if (!targetObject.CompareTag("ForeseePiece"))
+
+        String targetTagName = null;
+
+        if(playerId == (int)PlayerId.PLAYER_1)
+        {
+            targetTagName = TagConstants.TAG_NAME_PLAYER_1_FORESEE_PIECE;
+        }
+        else if(playerId == (int)PlayerId.PLAYER_2)
+        {
+            targetTagName = TagConstants.TAG_NAME_PLAYER_2_FORESEE_PIECE;
+        }
+
+        if (!targetObject.CompareTag(targetTagName))
         {
             PieceMetadatas targetObjectScriptPieceMetadatas = targetObject.GetComponent<PieceMetadatas>();
             targetObjectLineNumber = (int)(targetObjectScriptPieceMetadatas.CurrentPieceLine);
         }
         
-        return targetObjectLineNumber == lineNumber && LayerMask.LayerToName(targetObject.layer).Equals("DestroyablePiece");
+        return targetObjectLineNumber == lineNumber && LayerMask.LayerToName(targetObject.layer).Equals(LayerConstants.LAYER_NAME_DESTROYABLE_PIECE);
     }
 
-    IEnumerator MovePiecesDown(int lineLimit, int processedLineCounter, int numberOfLinesToDestroy)
+    IEnumerator MovePiecesDown(int lineLimit, int processedLineCounter, int numberOfLinesToDestroy, int playerId)
     {
+        String targetTagName = null;
 
-        GameObject[] objects = GameObject.FindGameObjectsWithTag("PieceChild")
-                               .Where(pieceObject => LayerMask.LayerToName(pieceObject.layer).Equals("DestroyablePiece"))
+        if (playerId == (int)PlayerId.PLAYER_1)
+        {
+            targetTagName = TagConstants.TAG_NAME_PLAYER_1_PIECE_CHILD;
+        }
+        else if (playerId == (int)PlayerId.PLAYER_2)
+        {
+            targetTagName = TagConstants.TAG_NAME_PLAYER_2_PIECE_CHILD;
+        }
+
+        GameObject[] objects = GameObject.FindGameObjectsWithTag(targetTagName)
+                               .Where(pieceObject => LayerMask.LayerToName(pieceObject.layer).Equals(LayerConstants.LAYER_NAME_DESTROYABLE_PIECE))
                                .OrderBy(currentObject => currentObject.transform.position.x).ToArray();
 
         //When there is more than one line to destroy we compensate the lines destroyed by lowering the line limit for each line processed
@@ -392,11 +607,9 @@ public class GameManager : MonoBehaviour {
         }
 
         //Hide the line break earned points
-        this.scoreManagerScript.PointsText.gameObject.SetActive(false);
-        //Display new calculated score
-        this.scoreManagerScript.AddPlayerPointAmountToScore(numberOfLinesToDestroy);
-        IsDeletingLines = false;
-        this.TogglePieceChildObjectCollider(true);
+        this.scoreManagerScript.PlayersPointText[playerId].gameObject.SetActive(false);
+        this.playersDeletingLinesState[playerId] = false;
+        this.TogglePieceChildObjectCollider(true, playerId);
 
         yield return null;
 
@@ -405,25 +618,18 @@ public class GameManager : MonoBehaviour {
 
     IEnumerator LowerPiecePosition(GameObject currentObject, Vector3 positionGap)
     {
-        float targetPosition = currentObject.transform.position.z + positionGap.z;
-        while (true)
-        {
-            yield return new WaitForSeconds(0.06f);
 
-            Vector3 newCalculatedPosition = currentObject.transform.position + positionGap;
+        float timeWaiting = 0.5f;
 
-            currentObject.transform.position = Vector3.MoveTowards(currentObject.transform.position, newCalculatedPosition, 0.5f);
-
-            if (currentObject.transform.position.z <= targetPosition)
-            {
-                yield break;
-            }
-        }
+        Vector3 newCalculatedPosition = currentObject.transform.position + positionGap;
+        currentObject.transform.position = newCalculatedPosition;
+       
+        yield return new WaitForSecondsRealtime(timeWaiting);
     }
 
-    private void UpdatePositionMapForNewPiecesPosition(int lineLimit)
+    private void UpdatePositionMapForNewPiecesPosition(int lineLimit, int playerId)
     {
-        for (int i = 0; i < this.GameMap.GetLength(0); i++)
+        for (int i = 0; i < this.PlayersPositionMap[playerId].GetLength(0); i++)
         {
 
             if (i < lineLimit)
@@ -431,15 +637,15 @@ public class GameManager : MonoBehaviour {
                 continue;
             }
 
-            for (int j = 0; j < this.GameMap.GetLength(1); j++)
+            for (int j = 0; j < this.PlayersPositionMap[playerId].GetLength(1); j++)
             {
-                PositionMapElement currentElement = GameMap[i, j];
+                PositionMapElement currentElement = this.PlayersPositionMap[playerId][i, j];
 
                 if(currentElement.IsOccupied && currentElement.CurrentMapElement != null)
                 {
                     //Update the below element
-                    GameMap[i - 1, j].CurrentMapElement = currentElement.CurrentMapElement;
-                    GameMap[i - 1, j].IsOccupied = true;
+                    this.PlayersPositionMap[playerId][i - 1, j].CurrentMapElement = currentElement.CurrentMapElement;
+                    this.PlayersPositionMap[playerId][i - 1, j].IsOccupied = true;
 
                     //initialise current element
                     currentElement.IsOccupied = false;
@@ -450,12 +656,12 @@ public class GameManager : MonoBehaviour {
         }
     }
 
-    private void UpdateSuppressedLinesInPositionMap(int lineLimit)
+    private void UpdateSuppressedLinesInPositionMap(int lineLimit, int playerId)
     {
         //for every column in the map
-        for (int j = 0; j < this.GameMap.GetLength(1); j++)
+        for (int j = 0; j < this.PlayersPositionMap[playerId].GetLength(1); j++)
         {
-            PositionMapElement currentElement = GameMap[lineLimit, j];
+            PositionMapElement currentElement = this.PlayersPositionMap[playerId][lineLimit, j];
             //initialise current element
             currentElement.IsOccupied = false;
             currentElement.CurrentMapElement = null;
@@ -463,16 +669,16 @@ public class GameManager : MonoBehaviour {
         
     }
 
-    public GameObject FetchHighestPieceChild()
+    public GameObject FetchHighestPieceChild(int playerId)
     {
 
-        for(int i = 0; i < this.GameMap.GetLength(1); i++)
+        for(int i = 0; i < this.PlayersPositionMap[playerId].GetLength(1); i++)
         {
-            bool occupied = this.GameMap[(int)(maxAllowedPlayableLine + 0.5f), i].IsOccupied;
+            bool occupied = this.PlayersPositionMap[playerId][(int)(maxAllowedPlayableLine + 0.5f), i].IsOccupied;
 
             if(occupied)
             {
-                return this.GameMap[(int)(maxAllowedPlayableLine + 0.5f), i].CurrentMapElement;
+                return this.PlayersPositionMap[playerId][(int)(maxAllowedPlayableLine + 0.5f), i].CurrentMapElement;
             }
              
         }
@@ -481,10 +687,10 @@ public class GameManager : MonoBehaviour {
         
     }
 
-    public bool IsGameOver()
+    public bool IsGameOver(int playerId)
     {
 
-        GameObject highestPieceChild = this.FetchHighestPieceChild();
+        GameObject highestPieceChild = this.FetchHighestPieceChild(playerId);
 
         if(highestPieceChild == null)
         {
@@ -497,27 +703,87 @@ public class GameManager : MonoBehaviour {
 
     }
 
-    public void GameOver()
+    public void GameOver(int looserPlayerId)
     {
-        this.gameOverText.text = "Game Over";
-        this.restartText.text = "Press 'Return' for restart level \n";
-        this.restartText.text += "Press 'Space' to return to the main menu";
+        Vector3 gameOverTextPosition = CalculateTextScreenPositionToMiddleField(looserPlayerId, 0);
+
+        RectTransform gameOverTextRectTransform = this.gameOverText.GetComponent<RectTransform>();
+        gameOverTextRectTransform.position = gameOverTextPosition;
+
+        Vector3 restartTextPosition = CalculateTextScreenPositionToMiddleField(looserPlayerId, -6f);
+
+        RectTransform restartTextRectTransform = this.restartText.GetComponent<RectTransform>();
+        restartTextRectTransform.position = restartTextPosition;
+
+        this.gameOverText.text = "GAME OVER";
+        this.restartText.text = "Press 'Enter'\n for restart level\n";
+        this.restartText.text += "\nPress 'Escape'\n to return to the main menu";
         
-        this.restart = true;
+        this.Restart = true;
         this.gameOverText.gameObject.SetActive(true);
         this.restartText.gameObject.SetActive(true);
     }
 
-    public void CleanUpPieceObject(GameObject parent)
+    public void DeclareWinner(int winnerPlayerId)
+    {
+        Vector3 winnerTextPosition = CalculateTextScreenPositionToMiddleField(winnerPlayerId, 0f);
+
+        RectTransform winnerTextRectTransform = this.winnerText.GetComponent<RectTransform>();
+        winnerTextRectTransform.position = winnerTextPosition;
+
+        this.winnerText.text = "WINNER";
+        this.winnerText.gameObject.SetActive(true);
+        this.FreezePiece(true, true, winnerPlayerId);
+    }
+
+    private static Vector3 CalculateTextScreenPositionToMiddleField(int playerId, float offset)
+    {
+        String fieldTagName = null;
+
+        if (playerId == (int)GameManager.PlayerId.PLAYER_1)
+        {
+            fieldTagName = TagConstants.TAG_NAME_PLAYER_1_FIELD;
+        }
+        else if (playerId == (int)GameManager.PlayerId.PLAYER_2)
+        {
+            fieldTagName = TagConstants.TAG_NAME_PLAYER_2_FIELD;
+        }
+
+        GameObject field = GameObject.FindGameObjectWithTag(fieldTagName);
+
+        Vector3 fieldsize = ElementType.CalculateGameObjectMaxRange(field.transform.GetChild(0).gameObject);
+
+        Vector3 textTargetWorldPosition = new Vector3(
+              field.transform.position.x + fieldsize.x / 2
+            , 0.5f
+            , field.transform.position.z + fieldsize.z / 2 + offset);
+
+        Vector3 textScreenPosition = Camera.main.WorldToScreenPoint(textTargetWorldPosition);
+        return textScreenPosition;
+    }
+
+    public void CleanUpPieceObject(GameObject parent, int playerId)
     {
         parent.transform.DetachChildren();
         Destroy(parent);
-        this.CurrentGamePiece = null;
+        this.playersCurrentGamePiece[playerId] = null;
     }
 
-    private void TogglePieceChildObjectCollider(bool activate)
+    private void TogglePieceChildObjectCollider(bool activate, int playerId)
     {
-        GameObject[] pieceChildObjectList = GameObject.FindGameObjectsWithTag("PieceChild");
+
+        String targetTagName = null;
+
+        if (playerId == (int)PlayerId.PLAYER_1)
+        {
+            targetTagName = TagConstants.TAG_NAME_PLAYER_1_PIECE_CHILD;
+        }
+        else if (playerId == (int)PlayerId.PLAYER_2)
+        {
+            targetTagName = TagConstants.TAG_NAME_PLAYER_2_PIECE_CHILD;
+        }
+
+        GameObject[] pieceChildObjectList = GameObject.FindGameObjectsWithTag(targetTagName);
 
         foreach (GameObject pieceChildObject in pieceChildObjectList)
         {
@@ -554,55 +820,81 @@ public class GameManager : MonoBehaviour {
         return currentParentName + "_" + childPiece.name;
     }
 
-    public bool IsReadyToSpawnObject
+    public Dictionary<int, bool> PlayersSpawnAuthorisation
     {
         get
         {
-            return isReadyToSpawnObject;
+            return playersSpawnAuthorisation;
         }
 
         set
         {
-            isReadyToSpawnObject = value;
+            playersSpawnAuthorisation = value;
         }
     }
 
-    public PositionMapElement[,] GameMap
+    public Dictionary<int, PositionMapElement[,]> PlayersPositionMap
     {
         get
         {
-            return map;
+            return playersPositionMap;
         }
 
         set
         {
-            map = value;
+            playersPositionMap = value;
         }
     }
 
-    public GameObject CurrentGamePiece
+    public Dictionary<int, float> PlayersPiecesMovementSpeed
     {
         get
         {
-            return currentGamePiece;
+            return playersPiecesMovementSpeed;
         }
 
         set
         {
-            currentGamePiece = value;
+            playersPiecesMovementSpeed = value;
         }
     }
 
-    public bool IsDeletingLines
+    public GameObject GameField
     {
         get
         {
-            return isDeletingLines;
+            return gameField;
         }
 
         set
         {
-            isDeletingLines = value;
+            gameField = value;
+        }
+    }
+
+    public GameObject ForeseeWindow
+    {
+        get
+        {
+            return foreseeWindow;
+        }
+
+        set
+        {
+            foreseeWindow = value;
+        }
+    }
+
+    public bool Restart
+    {
+        get
+        {
+            return restart;
+        }
+
+        set
+        {
+            restart = value;
         }
     }
 }

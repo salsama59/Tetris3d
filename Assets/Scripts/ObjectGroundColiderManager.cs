@@ -7,14 +7,14 @@ public class ObjectGroundColiderManager : MonoBehaviour
 {
     private void OnCollisionEnter(Collision other)
     {
-        
+        bool isOtherColliderHasPieceChildTag = other.collider.CompareTag(TagConstants.TAG_NAME_PLAYER_1_PIECE_CHILD) || other.collider.CompareTag(TagConstants.TAG_NAME_PLAYER_2_PIECE_CHILD);
         //if a piece child collide with sommething other than the background
-        if (other.collider.CompareTag("PieceChild") && this.IsCollisionAccepted())
+        if(isOtherColliderHasPieceChildTag && this.IsCollisionAccepted())
         {
-
+            bool isThisColliderHasPieceChildTag = this.CompareTag(TagConstants.TAG_NAME_PLAYER_1_PIECE_CHILD) || this.CompareTag(TagConstants.TAG_NAME_PLAYER_2_PIECE_CHILD);
             PieceMovement parentPieceMovementScript = null;
 
-            if (other.collider.transform.parent == null && other.collider.CompareTag("PieceChild") && this.transform.parent != null && this.CompareTag("PieceChild"))
+            if (other.collider.transform.parent == null && isOtherColliderHasPieceChildTag && this.transform.parent != null && isThisColliderHasPieceChildTag)
             {
                 parentPieceMovementScript = this.GetComponentInParent<PieceMovement>();
             }
@@ -31,26 +31,38 @@ public class ObjectGroundColiderManager : MonoBehaviour
             //If the piece are moving
             if (parentPieceMovementScript.IsMoving)
             {
-                if(this.IsContactFromBelow(other))
+                if (this.IsContactFromBelow(other))
                 {
-                    GameObject gameManagerObject = GameObject.FindGameObjectWithTag("GameManager");
+                    GameObject gameManagerObject = GameObject.FindGameObjectWithTag(TagConstants.TAG_NAME_GAME_MANAGER);
                     GameManager gameManagerScript = gameManagerObject.GetComponent<GameManager>();
                     parentPieceMovementScript.IsMoving = false;
                     Rigidbody objectColidingParentRigidBody = other.collider.GetComponentInParent<Rigidbody>();
-                    objectColidingParentRigidBody.velocity = new Vector3(0, 0, 0);
+                    objectColidingParentRigidBody.velocity = Vector3.zero;
                     objectColidingParentRigidBody.isKinematic = true;
                     this.CorrectObjectAngles(objectColidingParentRigidBody.gameObject);
-                    this.CorrectObjectPosition(objectColidingParentRigidBody.gameObject);
-                    this.UpdateMapDatasForObject(objectColidingParentRigidBody.gameObject, gameManagerScript.GameMap);
-                    gameManagerScript.CleanUpPieceObject(objectColidingParentRigidBody.gameObject);
-                    gameManagerScript.DestroyObjectLines();
+                    this.CorrectObjectPosition(objectColidingParentRigidBody.gameObject, parentPieceMovementScript.OwnerId, gameManagerScript);
+                    this.UpdateMapDatasForObject(objectColidingParentRigidBody.gameObject, gameManagerScript, parentPieceMovementScript.OwnerId);
+                    gameManagerScript.CleanUpPieceObject(objectColidingParentRigidBody.gameObject, parentPieceMovementScript.OwnerId);
+                    gameManagerScript.DestroyObjectLines(parentPieceMovementScript.OwnerId);
                     //test for the game over requirements
-                    if (gameManagerScript.IsGameOver())
+                    if (gameManagerScript.IsGameOver(parentPieceMovementScript.OwnerId))
                     {
-                        gameManagerScript.GameOver();
+                        gameManagerScript.GameOver(parentPieceMovementScript.OwnerId);
+
+                        int winnerId = parentPieceMovementScript.OwnerId == (int)GameManager.PlayerId.PLAYER_1 ? (int)GameManager.PlayerId.PLAYER_2 : (int)GameManager.PlayerId.PLAYER_1;
+
+                        if (ApplicationData.IsInMultiPlayerMode())
+                        {
+                            gameManagerScript.DeclareWinner(winnerId);
+                        }
                         return;
                     }
-                    gameManagerScript.IsReadyToSpawnObject = true;
+
+                    if(!gameManagerScript.Restart)
+                    {
+                        gameManagerScript.PlayersSpawnAuthorisation[parentPieceMovementScript.OwnerId] = true;
+                    }
+                    
                 }
             }
         }
@@ -59,31 +71,77 @@ public class ObjectGroundColiderManager : MonoBehaviour
 
     private bool IsCollisionAccepted()
     {
-        return !this.gameObject.CompareTag("Background");
+        return !this.gameObject.CompareTag(TagConstants.TAG_NAME_FIELD_BACKGROUND);
     }
 
-    private void CorrectObjectPosition(GameObject objectColliding)
+    private void CorrectObjectPosition(GameObject objectColliding, int playerId, GameManager gameManager)
     {
-        GameObject gameManagerObject = GameObject.FindGameObjectWithTag("GameManager");
-        GameManager gameManager = gameManagerObject.GetComponent<GameManager>();
-        PositionMapElement[,] positionMap = gameManager.GameMap;
+        bool isCorrected = false;
+
+        PositionMapElement[,] positionMap = gameManager.PlayersPositionMap[playerId];
 
         for (int i = 0; i < positionMap.GetLength(0); i++)
         {
-            for(int j = 0; j  < positionMap.GetLength(1); j++)
+            for(int j = 0; j < positionMap.GetLength(1); j++)
             {
-                if(objectColliding.transform.position.x < j + 1 && objectColliding.transform.position.x > j)
+                isCorrected = this.CorrectPlayerPiecePosition(objectColliding, playerId, gameManager, positionMap, i, j);
+
+                if(isCorrected)
                 {
-                    if(objectColliding.transform.position.z < i + 1 && objectColliding.transform.position.z > i)
-                    {
-                        objectColliding.transform.position = positionMap[i, j].Position;
-                    }
+                    return;
                 }
             }
         }
     }
 
-    private void UpdateMapDatasForObject(GameObject parentObject, PositionMapElement[,] positionMap)
+    private bool CorrectPlayerPiecePosition(GameObject objectColliding, int playerId, GameManager gameManager, PositionMapElement[,] positionMap, int i, int j)
+    {
+        float positionAdjustment = 0;
+        float posX = objectColliding.transform.position.x;
+        bool isCorrected = false;
+
+        if (ApplicationData.IsInMultiPlayerMode())
+        {
+            isCorrected = this.CorrectPlayerPiecePositionForTwoPlayerMode(objectColliding, playerId, gameManager, positionMap, i, j, positionAdjustment, posX);
+        }
+        else
+        {
+            isCorrected = this.CorrectPlayerPiecePositionForOnePlayerMode(objectColliding, playerId, gameManager, positionMap, i, j, positionAdjustment, posX);
+        }
+
+        return isCorrected;
+    }
+
+    private bool CorrectPlayerPiecePositionForOnePlayerMode(GameObject objectColliding, int playerId, GameManager gameManager, PositionMapElement[,] positionMap, int i, int j, float positionAdjustment, float posX)
+    {
+        if (posX < j + 1 && posX > j)
+        {
+            if (objectColliding.transform.position.z < i + 1 && objectColliding.transform.position.z > i)
+            {
+                objectColliding.transform.position = positionMap[i, j].Position;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool CorrectPlayerPiecePositionForTwoPlayerMode(GameObject objectColliding, int playerId, GameManager gameManager, PositionMapElement[,] positionMap, int i, int j, float positionAdjustment, float posX)
+    {
+        positionAdjustment = -0.5f;
+        if (posX < (gameManager.MapValueToPosition(j + 1, playerId) + positionAdjustment) && posX > (gameManager.MapValueToPosition(j, playerId) + positionAdjustment))
+        {
+            if (objectColliding.transform.position.z < i + 1 && objectColliding.transform.position.z > i)
+            {
+                objectColliding.transform.position = positionMap[i, j].Position;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void UpdateMapDatasForObject(GameObject parentObject, GameManager gameManagerScript, int playerId)
     {
 
         Transform[] childrenTransform = parentObject.GetComponentsInChildren<Transform>();
@@ -91,10 +149,20 @@ public class ObjectGroundColiderManager : MonoBehaviour
         foreach (Transform childTransform in childrenTransform)
         {
             int linePosition = (int)Math.Round(childTransform.position.z - 0.5f);
-            int columnPosition = (int)Math.Round(childTransform.position.x - 0.5f);
-            positionMap[linePosition, columnPosition].IsOccupied = true;
-            positionMap[linePosition, columnPosition].CurrentMapElement = childTransform.gameObject;
-            childTransform.gameObject.layer = LayerMask.NameToLayer("DestroyablePiece");
+            int columnPosition = 0;
+
+            if (ApplicationData.IsInMultiPlayerMode())
+            {
+                columnPosition = gameManagerScript.PositionToMapValue(childTransform.position.x, playerId);
+            }
+            else
+            {
+                columnPosition = (int)Math.Round(childTransform.position.x - 0.5f);
+            }
+
+            gameManagerScript.PlayersPositionMap[playerId][linePosition, columnPosition].IsOccupied = true;
+            gameManagerScript.PlayersPositionMap[playerId][linePosition, columnPosition].CurrentMapElement = childTransform.gameObject;
+            childTransform.gameObject.layer = LayerMask.NameToLayer(LayerConstants.LAYER_NAME_DESTROYABLE_PIECE);
         }
     }
 
@@ -120,7 +188,7 @@ public class ObjectGroundColiderManager : MonoBehaviour
         foreach (Transform childTransform in childrenTransform)
         {
             
-            if (Physics.Raycast(childTransform.position, new Vector3(0f, 0f, -1f), out hitInfo, 3f, LayerMask.GetMask("DestroyablePiece", "ArenaWall"), QueryTriggerInteraction.Ignore))
+            if (Physics.Raycast(childTransform.position, new Vector3(0f, 0f, -1f), out hitInfo, 3f, LayerMask.GetMask(LayerConstants.LAYER_NAME_DESTROYABLE_PIECE, LayerConstants.LAYER_NAME_ARENA_WALL), QueryTriggerInteraction.Ignore))
             {
                 if (hitInfo.collider != null)
                 {

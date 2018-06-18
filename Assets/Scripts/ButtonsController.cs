@@ -15,24 +15,24 @@ public class ButtonsController : MonoBehaviour
     private void Start()
     {
         this.CurrentMenuId = (int)MenuId.MAIN_MENU;
-    }
-
-    public void FindMainMenu()
-    {
-
-        MainMenu = GameObject.FindWithTag("MainMenu");
+        MainMenu = GameObject.FindWithTag(TagConstants.TAG_NAME_MAIN_MENU);
 
         if (MainMenu == null)
         {
             Debug.Log("Uneable to find the canvas in the scene");
         }
-
     }
 
     public void LaunchOnePlayerMode()
     {
-        this.FindMainMenu();
-        this.LaunchGame();
+        ApplicationData.playerNumber = 1;
+        this.LaunchGame(SceneConstants.SCENE_NAME_ONE_PLAYER_MODE);
+    }
+
+    public void LaunchTwoPlayerMode()
+    {
+        ApplicationData.playerNumber = 2;
+        this.LaunchGame(SceneConstants.SCENE_NAME_TWO_PLAYER_MODE);
     }
 
     public void DisplayLocalModeSubMenu1()
@@ -71,10 +71,10 @@ public class ButtonsController : MonoBehaviour
 
     }
 
-    private void LaunchGame()
+    private void LaunchGame(string sceneName)
     {
         Destroy(MainMenu);
-        SceneManager.LoadScene("One_Player_Mode_Game_Scene");
+        SceneManager.LoadScene(sceneName);
     }
 
     public GameObject MainMenu
