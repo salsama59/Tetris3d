@@ -6,10 +6,9 @@ using UnityEngine.UI;
 
 public class ButtonsController : MonoBehaviour
 {
-    private GameObject mainMenu;
     public GameObject[] mainMenuButtons;
     public GameObject[] localModeSubMenuButtons;
-    private int currentMenuId;
+
     public enum MenuId { MAIN_MENU = 0, LOCAL_MODE = 1 };
 
     private void Start()
@@ -77,29 +76,7 @@ public class ButtonsController : MonoBehaviour
         SceneManager.LoadScene(sceneName);
     }
 
-    public GameObject MainMenu
-    {
-        get
-        {
-            return mainMenu;
-        }
+    public GameObject MainMenu { get; set; }
 
-        set
-        {
-            mainMenu = value;
-        }
-    }
-
-    public int CurrentMenuId
-    {
-        get
-        {
-            return currentMenuId;
-        }
-
-        set
-        {
-            currentMenuId = value;
-        }
-    }
+    public int CurrentMenuId { get; set; }
 }

@@ -5,22 +5,23 @@ using System;
 
 public class ObjectGroundColiderManager : MonoBehaviour
 {
-    private void OnCollisionEnter(Collision other)
+
+    private void OnTriggerEnter(Collider other)
     {
-        bool isOtherColliderHasPieceChildTag = other.collider.CompareTag(TagConstants.TAG_NAME_PLAYER_1_PIECE_CHILD) || other.collider.CompareTag(TagConstants.TAG_NAME_PLAYER_2_PIECE_CHILD);
-        //if a piece child collide with sommething other than the background
+        bool isOtherColliderHasPieceChildTag = other.CompareTag(TagConstants.TAG_NAME_PLAYER_1_PIECE_CHILD) || other.CompareTag(TagConstants.TAG_NAME_PLAYER_2_PIECE_CHILD);
+        //if a piece child collide with something other than the background
         if(isOtherColliderHasPieceChildTag && this.IsCollisionAccepted())
         {
             bool isThisColliderHasPieceChildTag = this.CompareTag(TagConstants.TAG_NAME_PLAYER_1_PIECE_CHILD) || this.CompareTag(TagConstants.TAG_NAME_PLAYER_2_PIECE_CHILD);
             PieceMovement parentPieceMovementScript = null;
 
-            if (other.collider.transform.parent == null && isOtherColliderHasPieceChildTag && this.transform.parent != null && isThisColliderHasPieceChildTag)
+            if (other.transform.parent == null && isOtherColliderHasPieceChildTag && this.transform.parent != null && isThisColliderHasPieceChildTag)
             {
                 parentPieceMovementScript = this.GetComponentInParent<PieceMovement>();
             }
             else
             {
-                parentPieceMovementScript = other.collider.GetComponentInParent<PieceMovement>();
+                parentPieceMovementScript = other.GetComponentInParent<PieceMovement>();
             }
 
             if(parentPieceMovementScript == null)
@@ -33,14 +34,19 @@ public class ObjectGroundColiderManager : MonoBehaviour
             {
                 if (this.IsContactFromBelow(other))
                 {
+                    Rigidbody objectColidingParentRigidBody = other.GetComponentInParent<Rigidbody>();
+                    if(objectColidingParentRigidBody == null)
+                    {
+                        return;
+                    }
+
                     GameObject gameManagerObject = GameObject.FindGameObjectWithTag(TagConstants.TAG_NAME_GAME_MANAGER);
                     GameManager gameManagerScript = gameManagerObject.GetComponent<GameManager>();
                     parentPieceMovementScript.IsMoving = false;
-                    Rigidbody objectColidingParentRigidBody = other.collider.GetComponentInParent<Rigidbody>();
+                    
                     objectColidingParentRigidBody.velocity = Vector3.zero;
                     objectColidingParentRigidBody.isKinematic = true;
-                    this.CorrectObjectAngles(objectColidingParentRigidBody.gameObject);
-                    this.CorrectObjectPosition(objectColidingParentRigidBody.gameObject, parentPieceMovementScript.OwnerId, gameManagerScript);
+                    this.CorrectPiecePosition(objectColidingParentRigidBody.gameObject);
                     this.UpdateMapDatasForObject(objectColidingParentRigidBody.gameObject, gameManagerScript, parentPieceMovementScript.OwnerId);
                     gameManagerScript.CleanUpPieceObject(objectColidingParentRigidBody.gameObject, parentPieceMovementScript.OwnerId);
                     gameManagerScript.DestroyObjectLines(parentPieceMovementScript.OwnerId);
@@ -66,7 +72,6 @@ public class ObjectGroundColiderManager : MonoBehaviour
                 }
             }
         }
-
     }
 
     private bool IsCollisionAccepted()
@@ -74,71 +79,35 @@ public class ObjectGroundColiderManager : MonoBehaviour
         return !this.gameObject.CompareTag(TagConstants.TAG_NAME_FIELD_BACKGROUND);
     }
 
-    private void CorrectObjectPosition(GameObject objectColliding, int playerId, GameManager gameManager)
+    private void CorrectPiecePosition(GameObject objectColliding)
     {
-        bool isCorrected = false;
+        float fractionalLimit = 1f;
+        float halfFractionalLimit = 0.5f;
+        float calculatedZposition = 0f;
+        float currentZPosition = objectColliding.transform.position.z;
+        bool isNegative = currentZPosition < 0 ? true : false;
 
-        PositionMapElement[,] positionMap = gameManager.PlayersPositionMap[playerId];
+        float fractionnalPart = Mathf.Abs(currentZPosition) - Mathf.Abs((int)currentZPosition);
 
-        for (int i = 0; i < positionMap.GetLength(0); i++)
+        if(fractionnalPart > 0 && fractionnalPart <= halfFractionalLimit)
         {
-            for(int j = 0; j < positionMap.GetLength(1); j++)
-            {
-                isCorrected = this.CorrectPlayerPiecePosition(objectColliding, playerId, gameManager, positionMap, i, j);
-
-                if(isCorrected)
-                {
-                    return;
-                }
-            }
+            calculatedZposition = Mathf.Abs((int)currentZPosition) + halfFractionalLimit;
         }
-    }
-
-    private bool CorrectPlayerPiecePosition(GameObject objectColliding, int playerId, GameManager gameManager, PositionMapElement[,] positionMap, int i, int j)
-    {
-        float positionAdjustment = 0;
-        float posX = objectColliding.transform.position.x;
-        bool isCorrected = false;
-
-        if (ApplicationData.IsInMultiPlayerMode())
+        else if(fractionnalPart > 0.5f && fractionnalPart <= fractionalLimit)
         {
-            isCorrected = this.CorrectPlayerPiecePositionForTwoPlayerMode(objectColliding, playerId, gameManager, positionMap, i, j, positionAdjustment, posX);
+            calculatedZposition = Mathf.Abs((int)currentZPosition) + fractionalLimit;
         }
         else
         {
-            isCorrected = this.CorrectPlayerPiecePositionForOnePlayerMode(objectColliding, playerId, gameManager, positionMap, i, j, positionAdjustment, posX);
+            return;
         }
 
-        return isCorrected;
-    }
-
-    private bool CorrectPlayerPiecePositionForOnePlayerMode(GameObject objectColliding, int playerId, GameManager gameManager, PositionMapElement[,] positionMap, int i, int j, float positionAdjustment, float posX)
-    {
-        if (posX < j + 1 && posX > j)
+        if(isNegative)
         {
-            if (objectColliding.transform.position.z < i + 1 && objectColliding.transform.position.z > i)
-            {
-                objectColliding.transform.position = positionMap[i, j].Position;
-                return true;
-            }
+            calculatedZposition *= -1;
         }
 
-        return false;
-    }
-
-    private bool CorrectPlayerPiecePositionForTwoPlayerMode(GameObject objectColliding, int playerId, GameManager gameManager, PositionMapElement[,] positionMap, int i, int j, float positionAdjustment, float posX)
-    {
-        positionAdjustment = -0.5f;
-        if (posX < (gameManager.MapValueToPosition(j + 1, playerId) + positionAdjustment) && posX > (gameManager.MapValueToPosition(j, playerId) + positionAdjustment))
-        {
-            if (objectColliding.transform.position.z < i + 1 && objectColliding.transform.position.z > i)
-            {
-                objectColliding.transform.position = positionMap[i, j].Position;
-                return true;
-            }
-        }
-
-        return false;
+        objectColliding.transform.position = new Vector3(objectColliding.transform.position.x, objectColliding.transform.position.y, calculatedZposition);
     }
 
     private void UpdateMapDatasForObject(GameObject parentObject, GameManager gameManagerScript, int playerId)
@@ -166,29 +135,17 @@ public class ObjectGroundColiderManager : MonoBehaviour
         }
     }
 
-    private void CorrectObjectAngles(GameObject gameObject)
-    {
-        PieceMetadatas objectScriptPieceMetadatas = gameObject.GetComponent<PieceMetadatas>();
-        //The last rotation known is stored in the piece metadatas
-        Quaternion objectQuaternion = objectScriptPieceMetadatas.CurrentRotation;
-        float xAngle = objectQuaternion.eulerAngles.x;
-        float yAngle = objectQuaternion.eulerAngles.y;
-        float zAngle = objectQuaternion.eulerAngles.z;
-        
-        gameObject.transform.localEulerAngles = new Vector3 (xAngle, yAngle, zAngle);
-    }
-
-    private bool IsContactFromBelow(Collision otherCollision)
+    private bool IsContactFromBelow(Collider otherCollider)
     {
 
-        Transform[] childrenTransform = otherCollision.gameObject.GetComponentsInChildren<Transform>();
+        Transform[] childrenTransform = otherCollider.gameObject.GetComponentsInChildren<Transform>();
 
         RaycastHit hitInfo;
         
         foreach (Transform childTransform in childrenTransform)
         {
             
-            if (Physics.Raycast(childTransform.position, new Vector3(0f, 0f, -1f), out hitInfo, 3f, LayerMask.GetMask(LayerConstants.LAYER_NAME_DESTROYABLE_PIECE, LayerConstants.LAYER_NAME_ARENA_WALL), QueryTriggerInteraction.Ignore))
+            if (Physics.Raycast(childTransform.position, new Vector3(0f, 0f, -1f), out hitInfo, 3f, LayerMask.GetMask(LayerConstants.LAYER_NAME_DESTROYABLE_PIECE, LayerConstants.LAYER_NAME_ARENA_WALL), QueryTriggerInteraction.Collide))
             {
                 if (hitInfo.collider != null)
                 {

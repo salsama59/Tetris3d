@@ -21,7 +21,6 @@ public class GameManager : MonoBehaviour {
     public Text restartText;
     public Text gameOverText;
     public Text winnerText;
-    private bool restart;
     private ScoreManager scoreManagerScript;
     private int pieceId;
     public GameObject explosionEffects;
@@ -88,7 +87,7 @@ public class GameManager : MonoBehaviour {
         }
         else
         {
-            this.PrepareGameFieldForOnePlayerMode(playerId, out playerField, out playerForeseeWindow);
+            this.PrepareGameFieldForOnePlayerMode(out playerField, out playerForeseeWindow);
         }
         
         this.playersField.Add(playerId, playerField);
@@ -134,7 +133,7 @@ public class GameManager : MonoBehaviour {
         this.InstantiateFieldElements(out playerField, out playerForeseeWindow, fieldTagName, fieldPosition, foreseeWindowPosition);
     }
 
-    private void PrepareGameFieldForOnePlayerMode(int playerId, out GameObject playerField, out GameObject playerForeseeWindow)
+    private void PrepareGameFieldForOnePlayerMode(out GameObject playerField, out GameObject playerForeseeWindow)
     {
         float fieldPositionX = 0f;
         float foreseeWindowPositionX = 0f;
@@ -260,6 +259,15 @@ public class GameManager : MonoBehaviour {
     private void ManageGameFieldObject(GameObject piece, int playerId)
     {
         PieceMovement pieceMovementScript = piece.GetComponent<PieceMovement>();
+        PieceMetadatas pieceMetadatas = piece.GetComponent<PieceMetadatas>();
+
+        float positionCorrection = 0f;
+
+        if(pieceMetadatas.IsExcentered)
+        {
+            positionCorrection = 0.5f;
+        }
+
         pieceMovementScript.OwnerId = playerId;
 
         GameObject field = this.playersField[playerId];
@@ -267,7 +275,7 @@ public class GameManager : MonoBehaviour {
         Vector3 fieldsize = ElementType.CalculateGameObjectMaxRange(field.transform.transform.GetChild(0).gameObject);
 
         Vector3 instantiatePosition = new Vector3(
-                fieldsize.x / 2 + field.transform.position.x - 0.5f
+                fieldsize.x / 2 + field.transform.position.x - 0.5f + positionCorrection
                 , 0.5f
                 , fieldsize.z + field.transform.position.z - 1.5f);
 
@@ -387,18 +395,7 @@ public class GameManager : MonoBehaviour {
         {
             for (int l = 0; l < Mathf.RoundToInt(maxRange.x); l++)
             {
-                float mapElementXposition = 0;
-
-                if(ApplicationData.IsInMultiPlayerMode())
-                {
-                    mapElementXposition = MapValueToPosition(l, playerId);
-                }
-                else
-                {
-                    mapElementXposition = l + 0.5f;
-                }
-                
-                this.PlayersPositionMap[playerId][k, l] = new PositionMapElement (new Vector3(mapElementXposition, 0.5f, k + 0.5f), false);
+                this.PlayersPositionMap[playerId][k, l] = new PositionMapElement (false);
             }
         }
 
@@ -885,16 +882,5 @@ public class GameManager : MonoBehaviour {
         }
     }
 
-    public bool Restart
-    {
-        get
-        {
-            return restart;
-        }
-
-        set
-        {
-            restart = value;
-        }
-    }
+    public bool Restart { get; set; }
 }
