@@ -179,6 +179,7 @@ public class PieceMovement : MonoBehaviour {
     private void RotateObject(bool isClockwise)
     {
         float yAxeRotation = rotationAmount;
+        PieceMetadatas pieceMetadatas = this.GetComponent<PieceMetadatas>();
 
         if (!isClockwise)
         {
@@ -193,6 +194,20 @@ public class PieceMovement : MonoBehaviour {
         Quaternion destinationRotation = originRotation * newrotation;
         //Rotate smoothly
         this.gameObjectTransform.rotation = Quaternion.Slerp(originRotation, destinationRotation, Mathf.Clamp(Time.time * PieceRotationSpeed, 0f, 1f));
+
+        if (pieceMetadatas.HasSpecificRotationBehaviour)
+        {
+            float currentYRotationValue = this.gameObjectTransform.rotation.eulerAngles.y;
+
+            if (currentYRotationValue == 90f || currentYRotationValue == 270f)
+            {
+                this.gameObjectTransform.position = this.gameObjectTransform.position + (Vector3.right / 2);
+            }
+            else
+            {
+                this.gameObjectTransform.position = this.gameObjectTransform.position + (Vector3.left / 2);
+            }
+        }
     }
 
     private void MoveObjectToNewPosition(Vector3 newPosition)

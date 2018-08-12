@@ -21,7 +21,6 @@ public class GameManager : MonoBehaviour {
     public Text restartText;
     public Text gameOverText;
     public Text winnerText;
-    private bool restart;
     private ScoreManager scoreManagerScript;
     private int pieceId;
     public GameObject explosionEffects;
@@ -33,6 +32,8 @@ public class GameManager : MonoBehaviour {
     private Dictionary<int, float> playersPiecesMovementSpeed = new Dictionary<int, float>();
     private Dictionary<int, GameObject> playersCurrentGamePiece = new Dictionary<int, GameObject>();
     private Dictionary<int, bool> playersDeletingLinesState = new Dictionary<int, bool>();
+    private Dictionary<int, Quaternion?> playersNextIntantiateRotation = new Dictionary<int, Quaternion?>();
+    private List<float> authorizedRotations;
     public enum PlayerId {PLAYER_1, PLAYER_2};
 
     private void Start()
@@ -53,8 +54,17 @@ public class GameManager : MonoBehaviour {
 
     private void InitialiseAllGameManagerElements()
     {
-        
-        for(int playerId = 0; playerId < ApplicationData.playerNumber; playerId++)
+        float angle = 0f;
+
+        this.AuthorizedRotations = new List<float>();
+
+        while (angle <= 180f)
+        {
+            this.AuthorizedRotations.Add(angle);
+            angle += 180f;
+        }
+
+        for (int playerId = 0; playerId < ApplicationData.playerNumber; playerId++)
         {
             this.InitialiseGameManagerProperties(playerId);
             this.PrepareGameField(playerId);
@@ -68,6 +78,7 @@ public class GameManager : MonoBehaviour {
     {
         this.playersSpawnAuthorisation.Add(playerId, true);
         this.playersNextObjectIndex.Add(playerId, null);
+        this.playersNextIntantiateRotation.Add(playerId, null);
         this.playersPiecesMovementSpeed.Add(playerId, INITIAL_PIECE_SPEED);
         this.playersCurrentGamePiece.Add(playerId, null);
         this.playersDeletingLinesState.Add(playerId, false);
@@ -88,7 +99,7 @@ public class GameManager : MonoBehaviour {
         }
         else
         {
-            this.PrepareGameFieldForOnePlayerMode(playerId, out playerField, out playerForeseeWindow);
+            this.PrepareGameFieldForOnePlayerMode(out playerField, out playerForeseeWindow);
         }
         
         this.playersField.Add(playerId, playerField);
@@ -134,7 +145,7 @@ public class GameManager : MonoBehaviour {
         this.InstantiateFieldElements(out playerField, out playerForeseeWindow, fieldTagName, fieldPosition, foreseeWindowPosition);
     }
 
-    private void PrepareGameFieldForOnePlayerMode(int playerId, out GameObject playerField, out GameObject playerForeseeWindow)
+    private void PrepareGameFieldForOnePlayerMode(out GameObject playerField, out GameObject playerForeseeWindow)
     {
         float fieldPositionX = 0f;
         float foreseeWindowPositionX = 0f;
@@ -221,23 +232,64 @@ public class GameManager : MonoBehaviour {
     {
         yield return new WaitForSeconds(startWait);
         GameObject piece = null;
+        Quaternion randomInstanciationRotation;
+
+        this.DestroyPlayerForeseenObject(playerId);
+
+        piece = this.GetPlayerNextPiece(playerId);
+        randomInstanciationRotation = this.GetPieceNextSpawnRotation(playerId);
+
+        //Manage the gameField object
+        this.ManageGameFieldObject(piece, playerId, randomInstanciationRotation);
+
+        //Manage the foreseen object
+        this.ManageForeseeObject(playerId);
+
+        yield return new WaitForSeconds(spawnWait);
+    }
+
+    private void DestroyPlayerForeseenObject(int playerId)
+    {
         GameObject foreseePieceObject = null;
 
-        if((int)PlayerId.PLAYER_1 == playerId)
+        if ((int)PlayerId.PLAYER_1 == playerId)
         {
             foreseePieceObject = GameObject.FindGameObjectWithTag(TagConstants.TAG_NAME_PLAYER_1_FORESEE_PIECE);
         }
-        else if((int)PlayerId.PLAYER_2 == playerId)
+        else if ((int)PlayerId.PLAYER_2 == playerId)
         {
             foreseePieceObject = GameObject.FindGameObjectWithTag(TagConstants.TAG_NAME_PLAYER_2_FORESEE_PIECE);
         }
 
         //Destroy the former foreseen piece before displaying the new one if it exists
-        if(foreseePieceObject != null)
+        if (foreseePieceObject != null)
         {
             Destroy(foreseePieceObject);
         }
+    }
 
+    private Quaternion GetPieceNextSpawnRotation(int playerId)
+    {
+        Quaternion randomInstanciationRotation;
+        //Chose the spawn rotation for the object either the last calculated one or a new calculated
+        if (this.PlayersNextIntantiateRotation[playerId] == null)
+        {
+            randomInstanciationRotation = Quaternion.Euler(
+            Quaternion.identity.x,
+            Quaternion.identity.y,
+            this.AuthorizedRotations[UnityEngine.Random.Range(0, AuthorizedRotations.Count)]);
+        }
+        else
+        {
+            randomInstanciationRotation = (Quaternion)this.PlayersNextIntantiateRotation[playerId];
+        }
+
+        return randomInstanciationRotation;
+    }
+
+    private GameObject GetPlayerNextPiece(int playerId)
+    {
+        GameObject piece;
         //Choose the object to instantiate either the current foreseen or a fresh new one (from start)
         if (this.playersNextObjectIndex[playerId] == null)
         {
@@ -248,18 +300,21 @@ public class GameManager : MonoBehaviour {
             piece = gamePiecesPool[(int)this.playersNextObjectIndex[playerId]];
         }
 
-        //Manage the gameField object
-        this.ManageGameFieldObject(piece, playerId);
-
-        //Manage the foreseen object
-        this.ManageForeseeObject(playerId);
-       
-        yield return new WaitForSeconds(spawnWait);
+        return piece;
     }
 
-    private void ManageGameFieldObject(GameObject piece, int playerId)
+    private void ManageGameFieldObject(GameObject piece, int playerId, Quaternion randomInstanciationRotation)
     {
         PieceMovement pieceMovementScript = piece.GetComponent<PieceMovement>();
+        PieceMetadatas pieceMetadatas = piece.GetComponent<PieceMetadatas>();
+
+        float positionCorrection = 0f;
+
+        if(pieceMetadatas.IsExcentered)
+        {
+            positionCorrection = 0.5f;
+        }
+
         pieceMovementScript.OwnerId = playerId;
 
         GameObject field = this.playersField[playerId];
@@ -267,11 +322,11 @@ public class GameManager : MonoBehaviour {
         Vector3 fieldsize = ElementType.CalculateGameObjectMaxRange(field.transform.transform.GetChild(0).gameObject);
 
         Vector3 instantiatePosition = new Vector3(
-                fieldsize.x / 2 + field.transform.position.x - 0.5f
+                fieldsize.x / 2 + field.transform.position.x - 0.5f + positionCorrection
                 , 0.5f
                 , fieldsize.z + field.transform.position.z - 1.5f);
-
-        GameObject instanciatedPiece = Instantiate(piece, instantiatePosition, Quaternion.identity);
+        
+        GameObject instanciatedPiece = Instantiate(piece, instantiatePosition, randomInstanciationRotation);
 
         //Update parent piece name and the children too thank to the pieceId
         this.UpdatePiecesName(instanciatedPiece);
@@ -282,18 +337,26 @@ public class GameManager : MonoBehaviour {
 
     private void ManageForeseeObject(int playerId)
     {
+        Quaternion randomInstanciationRotation;
         GameObject foreseePiece = null;
         GameObject foreseeWindow = this.playersForeSeeWindow[playerId];
         //Randomly select the foreseenObject
         this.playersNextObjectIndex[playerId] = UnityEngine.Random.Range(0, gamePiecesPool.Length);
+        //Randomly calculate rotation for the next forsee object
+        this.PlayersNextIntantiateRotation[playerId] = Quaternion.Euler(
+            Quaternion.identity.x,
+            Quaternion.identity.y,
+            this.AuthorizedRotations[UnityEngine.Random.Range(0, AuthorizedRotations.Count)]);
+
         foreseePiece = gamePiecesPool[(int)this.playersNextObjectIndex[playerId]];
+        randomInstanciationRotation = (Quaternion)this.PlayersNextIntantiateRotation[playerId];
 
         Vector3 foreseePiecePosition = new Vector3(
             foreseeWindow.transform.position.x,
             0.5f,
             foreseeWindow.transform.position.z);
 
-        GameObject instantiateForeseeObject = Instantiate(foreseePiece, foreseePiecePosition, Quaternion.identity);
+        GameObject instantiateForeseeObject = Instantiate(foreseePiece, foreseePiecePosition, randomInstanciationRotation);
         Transform[] childrensTransform =  instantiateForeseeObject.GetComponentsInChildren<Transform>();
         foreach (Transform childTransform in childrensTransform)
         {
@@ -387,18 +450,7 @@ public class GameManager : MonoBehaviour {
         {
             for (int l = 0; l < Mathf.RoundToInt(maxRange.x); l++)
             {
-                float mapElementXposition = 0;
-
-                if(ApplicationData.IsInMultiPlayerMode())
-                {
-                    mapElementXposition = MapValueToPosition(l, playerId);
-                }
-                else
-                {
-                    mapElementXposition = l + 0.5f;
-                }
-                
-                this.PlayersPositionMap[playerId][k, l] = new PositionMapElement (new Vector3(mapElementXposition, 0.5f, k + 0.5f), false);
+                this.PlayersPositionMap[playerId][k, l] = new PositionMapElement (false);
             }
         }
 
@@ -885,16 +937,31 @@ public class GameManager : MonoBehaviour {
         }
     }
 
-    public bool Restart
+    public bool Restart { get; set; }
+
+    public List<float> AuthorizedRotations
     {
         get
         {
-            return restart;
+            return authorizedRotations;
         }
 
         set
         {
-            restart = value;
+            authorizedRotations = value;
+        }
+    }
+
+    public Dictionary<int, Quaternion?> PlayersNextIntantiateRotation
+    {
+        get
+        {
+            return playersNextIntantiateRotation;
+        }
+
+        set
+        {
+            playersNextIntantiateRotation = value;
         }
     }
 }
