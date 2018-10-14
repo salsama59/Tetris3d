@@ -6,7 +6,9 @@ using System;
 public class PieceMetadatas : MonoBehaviour {
 
     private int? currentPieceLine = null;
-    private Quaternion currentRotation;
+    public bool isExcentered;
+    public bool hasSpecificRotationBehaviour;
+    private bool isSparkling;
 
     private void FixedUpdate()
     {
@@ -31,16 +33,44 @@ public class PieceMetadatas : MonoBehaviour {
         }
     }
 
-    public Quaternion CurrentRotation
+    public Quaternion CurrentRotation { get; set; }
+
+    public bool IsExcentered
     {
         get
         {
-            return currentRotation;
+            return isExcentered;
         }
 
         set
         {
-            currentRotation = value;
+            isExcentered = value;
+        }
+    }
+
+    public bool HasSpecificRotationBehaviour
+    {
+        get
+        {
+            return hasSpecificRotationBehaviour;
+        }
+
+        set
+        {
+            hasSpecificRotationBehaviour = value;
+        }
+    }
+
+    public bool IsSparkling
+    {
+        get
+        {
+            return isSparkling;
+        }
+
+        set
+        {
+            isSparkling = value;
         }
     }
 }
