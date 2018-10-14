@@ -37,6 +37,7 @@ public class GameManager : MonoBehaviour {
     private List<float> authorizedRotations;
     public enum PlayerId {PLAYER_1, PLAYER_2};
     public Material[] elementalColorList;
+    public GameObject victoryEffects;
 
     private void Start()
     {
@@ -828,6 +829,7 @@ public class GameManager : MonoBehaviour {
         this.Restart = true;
         this.gameOverText.gameObject.SetActive(true);
         this.restartText.gameObject.SetActive(true);
+        
     }
 
     public void DeclareWinner(int winnerPlayerId)
@@ -840,6 +842,7 @@ public class GameManager : MonoBehaviour {
         this.winnerText.text = "WINNER";
         this.winnerText.gameObject.SetActive(true);
         this.FreezePiece(true, true, winnerPlayerId);
+        Instantiate(victoryEffects, CalculateFireWorkPosition(winnerPlayerId, 0f), victoryEffects.transform.rotation);
     }
 
     private static Vector3 CalculateTextScreenPositionToMiddleField(int playerId, float offset)
@@ -866,6 +869,31 @@ public class GameManager : MonoBehaviour {
 
         Vector3 textScreenPosition = Camera.main.WorldToScreenPoint(textTargetWorldPosition);
         return textScreenPosition;
+    }
+
+    private Vector3 CalculateFireWorkPosition(int winnerId, float offset)
+    {
+        String fieldTagName = null;
+
+        if (winnerId == (int)GameManager.PlayerId.PLAYER_1)
+        {
+            fieldTagName = TagConstants.TAG_NAME_PLAYER_1_FIELD;
+        }
+        else if (winnerId == (int)GameManager.PlayerId.PLAYER_2)
+        {
+            fieldTagName = TagConstants.TAG_NAME_PLAYER_2_FIELD;
+        }
+
+        GameObject field = GameObject.FindGameObjectWithTag(fieldTagName);
+
+        Vector3 fieldsize = ElementType.CalculateGameObjectMaxRange(field.transform.GetChild(0).gameObject);
+
+        Vector3 fireworksTargetWorldPosition = new Vector3(
+              field.transform.position.x + fieldsize.x / 2
+            , 0.5f
+            , field.transform.position.z + fieldsize.z / 2 + offset);
+
+        return fireworksTargetWorldPosition;
     }
 
     public void CleanUpPieceObject(GameObject parent, int playerId)

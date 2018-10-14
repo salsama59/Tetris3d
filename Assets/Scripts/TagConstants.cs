@@ -16,4 +16,5 @@
     public const string TAG_NAME_FORESEE_WINDOW = "ForeseeWindow";
     public const string TAG_NAME_PLAYER_1_FIELD = "Player1Field";
     public const string TAG_NAME_PLAYER_2_FIELD = "Player2Field";
+    public const string TAG_NAME_SPARKLE_EFFECT = "SparkleEffect";
 }
