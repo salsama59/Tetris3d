@@ -33,8 +33,11 @@ public class GameManager : MonoBehaviour {
     private Dictionary<int, GameObject> playersCurrentGamePiece = new Dictionary<int, GameObject>();
     private Dictionary<int, bool> playersDeletingLinesState = new Dictionary<int, bool>();
     private Dictionary<int, Quaternion?> playersNextIntantiateRotation = new Dictionary<int, Quaternion?>();
+    private Dictionary<int, List<Material>> playersPieceNextColorsList = new Dictionary<int, List<Material>>();
     private List<float> authorizedRotations;
     public enum PlayerId {PLAYER_1, PLAYER_2};
+    public Material[] elementalColorList;
+    public GameObject victoryEffects;
 
     private void Start()
     {
@@ -82,6 +85,7 @@ public class GameManager : MonoBehaviour {
         this.playersPiecesMovementSpeed.Add(playerId, INITIAL_PIECE_SPEED);
         this.playersCurrentGamePiece.Add(playerId, null);
         this.playersDeletingLinesState.Add(playerId, false);
+        this.playersPieceNextColorsList.Add(playerId, new List<Material>());
         this.Restart = false;
         this.gameOverText.text = "";
         this.restartText.text = "";
@@ -233,14 +237,16 @@ public class GameManager : MonoBehaviour {
         yield return new WaitForSeconds(startWait);
         GameObject piece = null;
         Quaternion randomInstanciationRotation;
+        List<Material> randomPieceColors;
 
         this.DestroyPlayerForeseenObject(playerId);
 
         piece = this.GetPlayerNextPiece(playerId);
         randomInstanciationRotation = this.GetPieceNextSpawnRotation(playerId);
+        randomPieceColors = this.GetPlayerNextPieceMaterial(playerId, piece);
 
         //Manage the gameField object
-        this.ManageGameFieldObject(piece, playerId, randomInstanciationRotation);
+        this.ManageGameFieldObject(piece, playerId, randomInstanciationRotation, randomPieceColors);
 
         //Manage the foreseen object
         this.ManageForeseeObject(playerId);
@@ -287,6 +293,31 @@ public class GameManager : MonoBehaviour {
         return randomInstanciationRotation;
     }
 
+    private List<Material> GetPlayerNextPieceMaterial(int playerId, GameObject piece)
+    {
+        List<Material> materials = new List<Material>();
+        //Choose the object to instantiate either the current foreseen or a fresh new one (from start)
+
+        if(this.PlayersPieceNextColorsList[playerId].Count == 0)
+        {
+            Transform[] pieceTransformElements = piece.GetComponentsInChildren<Transform>();
+
+            foreach (Transform element in pieceTransformElements)
+            {
+                if (element.gameObject != piece)
+                {
+                    materials.Add(elementalColorList[UnityEngine.Random.Range(0, elementalColorList.Length)]);
+                }
+            }
+        }
+        else
+        {
+            materials = this.PlayersPieceNextColorsList[playerId];
+        }
+
+        return materials;
+    }
+
     private GameObject GetPlayerNextPiece(int playerId)
     {
         GameObject piece;
@@ -303,7 +334,7 @@ public class GameManager : MonoBehaviour {
         return piece;
     }
 
-    private void ManageGameFieldObject(GameObject piece, int playerId, Quaternion randomInstanciationRotation)
+    private void ManageGameFieldObject(GameObject piece, int playerId, Quaternion randomInstanciationRotation, List<Material> randomPieceColor)
     {
         PieceMovement pieceMovementScript = piece.GetComponent<PieceMovement>();
         PieceMetadatas pieceMetadatas = piece.GetComponent<PieceMetadatas>();
@@ -328,6 +359,11 @@ public class GameManager : MonoBehaviour {
         
         GameObject instanciatedPiece = Instantiate(piece, instantiatePosition, randomInstanciationRotation);
 
+        for(int i = 0; i < randomPieceColor.Count; i++)
+        {
+            instanciatedPiece.transform.GetChild(i).GetComponent<MeshRenderer>().material = randomPieceColor[i];
+        }
+
         //Update parent piece name and the children too thank to the pieceId
         this.UpdatePiecesName(instanciatedPiece);
         this.UpdatePieceChildrenTagName(playerId, instanciatedPiece);
@@ -340,23 +376,37 @@ public class GameManager : MonoBehaviour {
         Quaternion randomInstanciationRotation;
         GameObject foreseePiece = null;
         GameObject foreseeWindow = this.playersForeSeeWindow[playerId];
+        List<Material> randomPieceColor = null;
         //Randomly select the foreseenObject
         this.playersNextObjectIndex[playerId] = UnityEngine.Random.Range(0, gamePiecesPool.Length);
+        foreseePiece = gamePiecesPool[(int)this.playersNextObjectIndex[playerId]];
         //Randomly calculate rotation for the next forsee object
         this.PlayersNextIntantiateRotation[playerId] = Quaternion.Euler(
             Quaternion.identity.x,
             Quaternion.identity.y,
             this.AuthorizedRotations[UnityEngine.Random.Range(0, AuthorizedRotations.Count)]);
-
-        foreseePiece = gamePiecesPool[(int)this.playersNextObjectIndex[playerId]];
         randomInstanciationRotation = (Quaternion)this.PlayersNextIntantiateRotation[playerId];
+        //Randomly calculate colors for the next forsee object
+        this.PlayersPieceNextColorsList[playerId].Clear();
+        Transform[] pieceTransformElements = foreseePiece.GetComponentsInChildren<Transform>();
+        foreach (Transform element in pieceTransformElements)
+        {
+            if (element.gameObject != foreseePiece)
+            {
+                this.PlayersPieceNextColorsList[playerId].Add(elementalColorList[UnityEngine.Random.Range(0, elementalColorList.Length)]);
+            }
+        }
+        randomPieceColor = this.PlayersPieceNextColorsList[playerId];
 
         Vector3 foreseePiecePosition = new Vector3(
             foreseeWindow.transform.position.x,
             0.5f,
             foreseeWindow.transform.position.z);
 
+        //Instanciate the foresee piece
         GameObject instantiateForeseeObject = Instantiate(foreseePiece, foreseePiecePosition, randomInstanciationRotation);
+
+        //Update instanciated foresee piece
         Transform[] childrensTransform =  instantiateForeseeObject.GetComponentsInChildren<Transform>();
         foreach (Transform childTransform in childrensTransform)
         {
@@ -369,6 +419,11 @@ public class GameManager : MonoBehaviour {
                 childTransform.gameObject.tag = TagConstants.TAG_NAME_PLAYER_2_FORESEE_PIECE;
             }
         }
+        for (int i = 0; i < randomPieceColor.Count; i++)
+        {
+            instantiateForeseeObject.transform.GetChild(i).GetComponent<MeshRenderer>().material = randomPieceColor[i];
+        }
+
         PieceMovement instantiateForeseeObjectPieceMovementScript = instantiateForeseeObject.GetComponent<PieceMovement>();
         instantiateForeseeObjectPieceMovementScript.enabled = false;
         Rigidbody foreseePieceRigidBody = instantiateForeseeObject.GetComponent<Rigidbody>();
@@ -774,6 +829,7 @@ public class GameManager : MonoBehaviour {
         this.Restart = true;
         this.gameOverText.gameObject.SetActive(true);
         this.restartText.gameObject.SetActive(true);
+        
     }
 
     public void DeclareWinner(int winnerPlayerId)
@@ -786,6 +842,7 @@ public class GameManager : MonoBehaviour {
         this.winnerText.text = "WINNER";
         this.winnerText.gameObject.SetActive(true);
         this.FreezePiece(true, true, winnerPlayerId);
+        Instantiate(victoryEffects, CalculateFireWorkPosition(winnerPlayerId, 0f), victoryEffects.transform.rotation);
     }
 
     private static Vector3 CalculateTextScreenPositionToMiddleField(int playerId, float offset)
@@ -812,6 +869,31 @@ public class GameManager : MonoBehaviour {
 
         Vector3 textScreenPosition = Camera.main.WorldToScreenPoint(textTargetWorldPosition);
         return textScreenPosition;
+    }
+
+    private Vector3 CalculateFireWorkPosition(int winnerId, float offset)
+    {
+        String fieldTagName = null;
+
+        if (winnerId == (int)GameManager.PlayerId.PLAYER_1)
+        {
+            fieldTagName = TagConstants.TAG_NAME_PLAYER_1_FIELD;
+        }
+        else if (winnerId == (int)GameManager.PlayerId.PLAYER_2)
+        {
+            fieldTagName = TagConstants.TAG_NAME_PLAYER_2_FIELD;
+        }
+
+        GameObject field = GameObject.FindGameObjectWithTag(fieldTagName);
+
+        Vector3 fieldsize = ElementType.CalculateGameObjectMaxRange(field.transform.GetChild(0).gameObject);
+
+        Vector3 fireworksTargetWorldPosition = new Vector3(
+              field.transform.position.x + fieldsize.x / 2
+            , 0.5f
+            , field.transform.position.z + fieldsize.z / 2 + offset);
+
+        return fireworksTargetWorldPosition;
     }
 
     public void CleanUpPieceObject(GameObject parent, int playerId)
@@ -962,6 +1044,19 @@ public class GameManager : MonoBehaviour {
         set
         {
             playersNextIntantiateRotation = value;
+        }
+    }
+
+    public Dictionary<int, List<Material>> PlayersPieceNextColorsList
+    {
+        get
+        {
+            return playersPieceNextColorsList;
+        }
+
+        set
+        {
+            playersPieceNextColorsList = value;
         }
     }
 }

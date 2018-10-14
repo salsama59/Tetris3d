@@ -43,9 +43,33 @@ public class ObjectGroundColiderManager : MonoBehaviour
                     GameObject gameManagerObject = GameObject.FindGameObjectWithTag(TagConstants.TAG_NAME_GAME_MANAGER);
                     GameManager gameManagerScript = gameManagerObject.GetComponent<GameManager>();
                     parentPieceMovementScript.IsMoving = false;
-                    
                     objectColidingParentRigidBody.velocity = Vector3.zero;
                     objectColidingParentRigidBody.isKinematic = true;
+
+                    PieceMetadatas parentPieceMetadatasScript = objectColidingParentRigidBody.gameObject.GetComponent<PieceMetadatas>();
+                    if (parentPieceMetadatasScript.IsSparkling)
+                    {
+                        
+                        GameObject[] effectList = GameObject.FindGameObjectsWithTag(TagConstants.TAG_NAME_SPARKLE_EFFECT);
+                        foreach (GameObject effect in effectList)
+                        {
+                            effect.transform.parent = null;
+                            Destroy(effect);
+                        }
+
+                        PieceMetadatas[] metadataScripts = objectColidingParentRigidBody.gameObject.GetComponentsInChildren<PieceMetadatas>();
+
+                        foreach (PieceMetadatas metadataScript in metadataScripts)
+                        {
+                            if(metadataScript.gameObject != objectColidingParentRigidBody.gameObject)
+                            {
+                                metadataScript.IsSparkling = false;
+                            }
+                        }
+                        parentPieceMetadatasScript.IsSparkling = false;
+                    }
+                    
+                    
                     this.CorrectPiecePosition(objectColidingParentRigidBody.gameObject);
                     this.UpdateMapDatasForObject(objectColidingParentRigidBody.gameObject, gameManagerScript, parentPieceMovementScript.OwnerId);
                     gameManagerScript.CleanUpPieceObject(objectColidingParentRigidBody.gameObject, parentPieceMovementScript.OwnerId);
