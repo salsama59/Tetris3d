@@ -18,7 +18,7 @@ public class ButtonsController : MonoBehaviour
 
         if (MainMenu == null)
         {
-            Debug.Log("Uneable to find the canvas in the scene");
+            Debug.Log("Unable to find the canvas in the scene");
         }
     }
 
@@ -72,6 +72,21 @@ public class ButtonsController : MonoBehaviour
 
     private void LaunchGame(string sceneName)
     {
+
+        SoundUtils.StopSound(TagConstants.TAG_NAME_MAIN_MENU_SOUND);
+
+        switch (sceneName)
+        {
+            case SceneConstants.SCENE_NAME_ONE_PLAYER_MODE:
+                SoundUtils.PlaySound(TagConstants.TAG_NAME_ONE_PLAYER_MODE_SOUND);
+                break;
+            case SceneConstants.SCENE_NAME_TWO_PLAYER_MODE:
+                SoundUtils.PlaySound(TagConstants.TAG_NAME_TWO_PLAYER_MODE_SOUND);
+                break;
+            default:
+                break;
+        }
+
         Destroy(MainMenu);
         SceneManager.LoadScene(sceneName);
     }
