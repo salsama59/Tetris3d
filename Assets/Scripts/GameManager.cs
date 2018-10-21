@@ -219,6 +219,9 @@ public class GameManager : MonoBehaviour {
             }
             else if (Input.GetKeyDown(KeyCode.Escape))
             {
+                SoundUtils.StopSound(TagConstants.TAG_NAME_ONE_PLAYER_MODE_SOUND);
+                SoundUtils.StopSound(TagConstants.TAG_NAME_TWO_PLAYER_MODE_SOUND);
+                Destroy(GameObject.FindGameObjectWithTag(TagConstants.TAG_NAME_SOUND_CONTROLLER));
                 SceneManager.LoadScene(SceneConstants.SCENE_NAME_MAIN_MENU_SCENE);
             }
         }

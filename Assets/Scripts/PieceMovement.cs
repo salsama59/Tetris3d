@@ -17,6 +17,7 @@ public class PieceMovement : MonoBehaviour {
     private float pieceRotationSpeed;
     private GameManager gameManagerInstance;
     public int ownerId;
+    public GameObject pieceSwingEffect;
     public enum Direction {RIGHT, LEFT, DOWN};
 
     // Use this for initialization
@@ -208,6 +209,8 @@ public class PieceMovement : MonoBehaviour {
                 this.gameObjectTransform.position = this.gameObjectTransform.position + (Vector3.left / 2);
             }
         }
+
+        Instantiate(pieceSwingEffect, this.gameObjectTransform.position, Quaternion.identity);
     }
 
     private void MoveObjectToNewPosition(Vector3 newPosition)

@@ -17,4 +17,8 @@
     public const string TAG_NAME_PLAYER_1_FIELD = "Player1Field";
     public const string TAG_NAME_PLAYER_2_FIELD = "Player2Field";
     public const string TAG_NAME_SPARKLE_EFFECT = "SparkleEffect";
+    public const string TAG_NAME_SOUND_CONTROLLER = "SoundController";
+    public const string TAG_NAME_MAIN_MENU_SOUND = "MainMenuSound";
+    public const string TAG_NAME_ONE_PLAYER_MODE_SOUND = "OnePlayerModeSound";
+    public const string TAG_NAME_TWO_PLAYER_MODE_SOUND = "TwoPlayerModeSound";
 }
