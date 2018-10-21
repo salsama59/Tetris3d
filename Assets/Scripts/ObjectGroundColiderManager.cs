@@ -5,6 +5,7 @@ using System;
 
 public class ObjectGroundColiderManager : MonoBehaviour
 {
+    public GameObject pieceFallSoundEffect;
 
     private void OnTriggerEnter(Collider other)
     {
@@ -68,8 +69,8 @@ public class ObjectGroundColiderManager : MonoBehaviour
                         }
                         parentPieceMetadatasScript.IsSparkling = false;
                     }
-                    
-                    
+
+                    Instantiate(pieceFallSoundEffect, other.transform.position, Quaternion.identity);
                     this.CorrectPiecePosition(objectColidingParentRigidBody.gameObject);
                     this.UpdateMapDatasForObject(objectColidingParentRigidBody.gameObject, gameManagerScript, parentPieceMovementScript.OwnerId);
                     gameManagerScript.CleanUpPieceObject(objectColidingParentRigidBody.gameObject, parentPieceMovementScript.OwnerId);
