@@ -1,11 +1,6 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using System.Linq;
+﻿using UnityEngine;
 
 public class PieceMovement : MonoBehaviour {
-    private const float rotationMaxValue = 360f;
-    private const float rotationAmount = 90f;
     Rigidbody gameObJectRigidBody;
     Transform gameObjectTransform;
     private GameObject field;
@@ -62,8 +57,7 @@ public class PieceMovement : MonoBehaviour {
             if (Input.GetKeyDown(DetectPlayerRotation(Direction.RIGHT)))
             {
                 bool isClockwise = true;
-
-                if (!this.IsRotateForbiden())
+                if (MovementUtils.IsRotationPossible(this.maxRotateAmplitude, this.gameObject))
                 {
                     RotateObject(isClockwise);
                 }
@@ -71,7 +65,7 @@ public class PieceMovement : MonoBehaviour {
             else if(Input.GetKeyDown(DetectPlayerRotation(Direction.LEFT)))
             {
                 bool isClockwise = false;
-                if (!this.IsRotateForbiden())
+                if (MovementUtils.IsRotationPossible(this.maxRotateAmplitude, this.gameObject))
                 {
                     this.RotateObject(isClockwise);
                 }
@@ -179,7 +173,7 @@ public class PieceMovement : MonoBehaviour {
 
     private void RotateObject(bool isClockwise)
     {
-        float yAxeRotation = rotationAmount;
+        float yAxeRotation = MovementUtils.rotationAmount;
         PieceMetadatas pieceMetadatas = this.GetComponent<PieceMetadatas>();
 
         if (!isClockwise)
@@ -224,7 +218,6 @@ public class PieceMovement : MonoBehaviour {
 
     private bool IsMoveForbiden(KeyCode keyPushed)
     {
-        List<bool> rayCastHits = new List<bool>(); 
         Vector3 movementDirection = new Vector3();
 
         switch (keyPushed)
@@ -239,73 +232,7 @@ public class PieceMovement : MonoBehaviour {
                 break;
         }
 
-        float spherePositionAdjustment = movementDirection.x * 0.5f;
-
-        Transform[] childrenTransform = this.gameObject.GetComponentsInChildren<Transform>();
-
-        foreach (Transform childTransform in childrenTransform)
-        {
-            RaycastHit infos;
-            Vector3 sphereOrigin = new Vector3(childTransform.position.x - spherePositionAdjustment, childTransform.position.y, childTransform.position.z);
-            bool hasHitten = Physics.SphereCast(sphereOrigin, 0.5f, movementDirection, out infos, 1f, LayerMask.GetMask(LayerConstants.LAYER_NAME_DESTROYABLE_PIECE, LayerConstants.LAYER_NAME_ARENA_WALL));
-            rayCastHits.Add(hasHitten);
-        }
-
-        //Check if all raycast hit are false (return true if all hit are false but return false otherwise) 
-        bool movementAllowed = rayCastHits.ToArray().All(hit => hit == false);
-        
-        return !movementAllowed;
-
-    }
-
-    private bool IsRotateForbiden()
-    {
-        List<Vector3> nodes = this.CalculatePoints();
-        return this.SweepHasHit(nodes);
-    }
-
-    private List<Vector3> CalculatePoints()
-    {
-        float radius = maxRotateAmplitude;
-        List<Vector3> nodes = new List<Vector3>();
-        float calcAngle = 0;
-        int segments = 12;
-        float curveAmount = rotationMaxValue;
-
-        // Calculate Arc on X-Z    
-        for (int i = 0; i < segments + 1; i++)
-        {
-            float posX = Mathf.Cos(calcAngle * Mathf.Deg2Rad) * radius;
-            float posZ = Mathf.Sin(calcAngle * Mathf.Deg2Rad) * radius;
-            nodes.Add(transform.position + (transform.right * posX) + (transform.forward * posZ));
-            calcAngle += curveAmount / (float)segments;
-        }
-
-        return nodes;
-    }
-
-    private bool SweepHasHit(List<Vector3> nodes)
-    {
-        RaycastHit hit;
-
-        for (int i = 0; i < nodes.Count - 1; i++)
-        {
-            if(Physics.Linecast(nodes[i], nodes[i + 1], out hit, LayerMask.GetMask(LayerConstants.LAYER_NAME_DESTROYABLE_PIECE, LayerConstants.LAYER_NAME_ARENA_WALL), QueryTriggerInteraction.Ignore))
-            {
-                return true;
-            }
-            
-        }
-
-        return false;
-    }
-
-    private void DrawLines(List<Vector3> nodes)
-    {
-        for (int i = 0; i < nodes.Count - 1; i++)
-        {
-            Debug.DrawLine(nodes[i], nodes[i + 1], Color.red, 1.5f);
-        }
+        return !MovementUtils.IsMovementPossible(movementDirection, this.gameObject);
     }
 
     private float GetPieceMovementSpeed()
