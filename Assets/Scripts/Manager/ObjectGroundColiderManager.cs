@@ -14,15 +14,15 @@ public class ObjectGroundColiderManager : MonoBehaviour
         if(isOtherColliderHasPieceChildTag && this.IsCollisionAccepted())
         {
             bool isThisColliderHasPieceChildTag = this.CompareTag(TagConstants.TAG_NAME_PLAYER_1_PIECE_CHILD) || this.CompareTag(TagConstants.TAG_NAME_PLAYER_2_PIECE_CHILD);
-            PieceMovement parentPieceMovementScript = null;
+            PlayerPieceController parentPieceMovementScript = null;
 
             if (other.transform.parent == null && isOtherColliderHasPieceChildTag && this.transform.parent != null && isThisColliderHasPieceChildTag)
             {
-                parentPieceMovementScript = this.GetComponentInParent<PieceMovement>();
+                parentPieceMovementScript = this.GetComponentInParent<PlayerPieceController>();
             }
             else
             {
-                parentPieceMovementScript = other.GetComponentInParent<PieceMovement>();
+                parentPieceMovementScript = other.GetComponentInParent<PlayerPieceController>();
             }
 
             if(parentPieceMovementScript == null)
@@ -80,9 +80,9 @@ public class ObjectGroundColiderManager : MonoBehaviour
                     {
                         gameManagerScript.GameOver(parentPieceMovementScript.OwnerId);
 
-                        int winnerId = parentPieceMovementScript.OwnerId == (int)GameManager.PlayerId.PLAYER_1 ? (int)GameManager.PlayerId.PLAYER_2 : (int)GameManager.PlayerId.PLAYER_1;
+                        int winnerId = parentPieceMovementScript.OwnerId == (int)PlayerEnum.PlayerId.PLAYER_1 ? (int)PlayerEnum.PlayerId.PLAYER_2 : (int)PlayerEnum.PlayerId.PLAYER_1;
 
-                        if (ApplicationData.IsInMultiPlayerMode())
+                        if (ApplicationUtils.IsInMultiPlayerMode())
                         {
                             gameManagerScript.DeclareWinner(winnerId);
                         }
@@ -145,9 +145,9 @@ public class ObjectGroundColiderManager : MonoBehaviour
             int linePosition = (int)Math.Round(childTransform.position.z - 0.5f);
             int columnPosition = 0;
 
-            if (ApplicationData.IsInMultiPlayerMode())
+            if (ApplicationUtils.IsInMultiPlayerMode())
             {
-                columnPosition = gameManagerScript.PositionToMapValue(childTransform.position.x, playerId);
+                columnPosition = GameFieldUtils.PositionToMapValue(childTransform.position.x, playerId, gameManagerScript.PlayersField[playerId], gameManagerScript.PlayersForeSeeWindow[playerId]);
             }
             else
             {

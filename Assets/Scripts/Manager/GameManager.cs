@@ -9,7 +9,6 @@ using UnityEngine.UI;
 public class GameManager : MonoBehaviour {
 
     public const float maxAllowedPlayableLine = 19.5f;
-    public const float FIELD_MARGIN = 2f;
     private const float INITIAL_PIECE_SPEED = 8f;
     public GameObject[] gamePiecesPool;
     public float startWait;
@@ -35,21 +34,19 @@ public class GameManager : MonoBehaviour {
     private Dictionary<int, Quaternion?> playersNextIntantiateRotation = new Dictionary<int, Quaternion?>();
     private Dictionary<int, List<Material>> playersPieceNextColorsList = new Dictionary<int, List<Material>>();
     private List<float> authorizedRotations;
-    public enum PlayerId {PLAYER_1, PLAYER_2};
     public Material[] elementalColorList;
     public GameObject victoryEffects;
 
     private void Start()
     {
-        GameObject scoreManagerObject = GameObject.FindGameObjectWithTag(TagConstants.TAG_NAME_SCORE_MANAGER);
-        this.scoreManagerScript = scoreManagerObject.GetComponent<ScoreManager>();
+        this.scoreManagerScript = GameUtils.FetchScoreManagerScript();
         this.InitialiseAllGameManagerElements();
     }
 
     // Update is called once per frame
     void Update()
     {
-        for (int playerId = 0; playerId < ApplicationData.playerNumber; playerId++)
+        for (int playerId = 0; playerId < ApplicationUtils.playerNumber; playerId++)
         {
             this.ManagePlayersFrame(playerId);
         }
@@ -67,7 +64,7 @@ public class GameManager : MonoBehaviour {
             angle += 180f;
         }
 
-        for (int playerId = 0; playerId < ApplicationData.playerNumber; playerId++)
+        for (int playerId = 0; playerId < ApplicationUtils.playerNumber; playerId++)
         {
             this.InitialiseGameManagerProperties(playerId);
             this.PrepareGameField(playerId);
@@ -97,7 +94,7 @@ public class GameManager : MonoBehaviour {
     {
         GameObject playerField, playerForeseeWindow;
 
-        if(ApplicationData.IsInMultiPlayerMode())
+        if(ApplicationUtils.IsInMultiPlayerMode())
         {
             this.PrepareGameFieldForTwoPlayerMode(playerId, out playerField, out playerForeseeWindow);
         }
@@ -106,8 +103,8 @@ public class GameManager : MonoBehaviour {
             this.PrepareGameFieldForOnePlayerMode(out playerField, out playerForeseeWindow);
         }
         
-        this.playersField.Add(playerId, playerField);
-        this.playersForeSeeWindow.Add(playerId, playerForeseeWindow);
+        this.PlayersField.Add(playerId, playerField);
+        this.PlayersForeSeeWindow.Add(playerId, playerForeseeWindow);
 
     }
 
@@ -122,16 +119,16 @@ public class GameManager : MonoBehaviour {
 
         String fieldTagName = null;
 
-        if (playerId == (int)PlayerId.PLAYER_1)
+        if (playerId == (int)PlayerEnum.PlayerId.PLAYER_1)
         {
-            fieldPositionX = (fieldsize.x + FIELD_MARGIN) * -1;
-            foreseeWindowPositionX = (FIELD_MARGIN + fieldsize.x + foreseeWindowSize.x / 2) * -1;
+            fieldPositionX = (fieldsize.x + GameFieldUtils.FIELD_MARGIN) * -1;
+            foreseeWindowPositionX = (GameFieldUtils.FIELD_MARGIN + fieldsize.x + foreseeWindowSize.x / 2) * -1;
             fieldTagName = TagConstants.TAG_NAME_PLAYER_1_FIELD;
         }
-        else if (playerId == (int)PlayerId.PLAYER_2)
+        else if (playerId == (int)PlayerEnum.PlayerId.PLAYER_2)
         {
-            fieldPositionX = foreseeWindowSize.x + FIELD_MARGIN;
-            foreseeWindowPositionX = FIELD_MARGIN + foreseeWindowSize.x / 2;
+            fieldPositionX = foreseeWindowSize.x + GameFieldUtils.FIELD_MARGIN;
+            foreseeWindowPositionX = GameFieldUtils.FIELD_MARGIN + foreseeWindowSize.x / 2;
             fieldTagName = TagConstants.TAG_NAME_PLAYER_2_FIELD;
         }
 
@@ -207,7 +204,7 @@ public class GameManager : MonoBehaviour {
         {
             if (Input.GetKeyDown(KeyCode.Return))
             {
-                if(!ApplicationData.IsInMultiPlayerMode())
+                if(!ApplicationUtils.IsInMultiPlayerMode())
                 {
                     SceneManager.LoadScene(SceneConstants.SCENE_NAME_ONE_PLAYER_MODE);
                 }
@@ -229,7 +226,7 @@ public class GameManager : MonoBehaviour {
 
     private void FreezePiece(bool isPieceMoving, bool pieceKinematicState, int playerId)
     {
-        PieceMovement pieceMovementScript = this.playersCurrentGamePiece[playerId].GetComponent<PieceMovement>();
+        PlayerPieceController pieceMovementScript = this.playersCurrentGamePiece[playerId].GetComponent<PlayerPieceController>();
         pieceMovementScript.IsMoving = isPieceMoving == false? true : false;
         Rigidbody currentPieceRigidBody = this.playersCurrentGamePiece[playerId].GetComponent<Rigidbody>();
         currentPieceRigidBody.isKinematic = pieceKinematicState;
@@ -261,11 +258,11 @@ public class GameManager : MonoBehaviour {
     {
         GameObject foreseePieceObject = null;
 
-        if ((int)PlayerId.PLAYER_1 == playerId)
+        if ((int)PlayerEnum.PlayerId.PLAYER_1 == playerId)
         {
             foreseePieceObject = GameObject.FindGameObjectWithTag(TagConstants.TAG_NAME_PLAYER_1_FORESEE_PIECE);
         }
-        else if ((int)PlayerId.PLAYER_2 == playerId)
+        else if ((int)PlayerEnum.PlayerId.PLAYER_2 == playerId)
         {
             foreseePieceObject = GameObject.FindGameObjectWithTag(TagConstants.TAG_NAME_PLAYER_2_FORESEE_PIECE);
         }
@@ -339,8 +336,21 @@ public class GameManager : MonoBehaviour {
 
     private void ManageGameFieldObject(GameObject piece, int playerId, Quaternion randomInstanciationRotation, List<Material> randomPieceColor)
     {
-        PieceMovement pieceMovementScript = piece.GetComponent<PieceMovement>();
-        PieceMetadatas pieceMetadatas = piece.GetComponent<PieceMetadatas>();
+
+        PieceController genericPieceController;
+
+        if (playerId == (int)PlayerEnum.PlayerId.PLAYER_2)
+        {
+            genericPieceController = PieceUtils.FetchPiecePlayerPieceControllerScript(piece);
+        }
+        else
+        {
+            genericPieceController = PieceUtils.FetchPieceComputerPieceControllerScript(piece);
+        }
+
+        genericPieceController.enabled = true;
+
+        PieceMetadatas pieceMetadatas = PieceUtils.FetchPieceMetadataScript(piece);
 
         float positionCorrection = 0f;
 
@@ -349,10 +359,10 @@ public class GameManager : MonoBehaviour {
             positionCorrection = 0.5f;
         }
 
-        pieceMovementScript.OwnerId = playerId;
+        genericPieceController.OwnerId = playerId;
 
-        GameObject field = this.playersField[playerId];
-        pieceMovementScript.Field = field;
+        GameObject field = this.PlayersField[playerId];
+        genericPieceController.Field = field;
         Vector3 fieldsize = ElementType.CalculateGameObjectMaxRange(field.transform.transform.GetChild(0).gameObject);
 
         Vector3 instantiatePosition = new Vector3(
@@ -362,10 +372,15 @@ public class GameManager : MonoBehaviour {
         
         GameObject instanciatedPiece = Instantiate(piece, instantiatePosition, randomInstanciationRotation);
 
-        for(int i = 0; i < randomPieceColor.Count; i++)
+        
+        for (int i = 0; i < randomPieceColor.Count; i++)
         {
             instanciatedPiece.transform.GetChild(i).GetComponent<MeshRenderer>().material = randomPieceColor[i];
         }
+
+        PieceMetadatas instanciatedPieceMetadataScript = PieceUtils.FetchPieceMetadataScript(instanciatedPiece);
+
+        instanciatedPieceMetadataScript.IsPieceReady = true;
 
         //Update parent piece name and the children too thank to the pieceId
         this.UpdatePiecesName(instanciatedPiece);
@@ -378,7 +393,7 @@ public class GameManager : MonoBehaviour {
     {
         Quaternion randomInstanciationRotation;
         GameObject foreseePiece = null;
-        GameObject foreseeWindow = this.playersForeSeeWindow[playerId];
+        GameObject foreseeWindow = this.PlayersForeSeeWindow[playerId];
         List<Material> randomPieceColor = null;
         //Randomly select the foreseenObject
         this.playersNextObjectIndex[playerId] = UnityEngine.Random.Range(0, gamePiecesPool.Length);
@@ -413,11 +428,11 @@ public class GameManager : MonoBehaviour {
         Transform[] childrensTransform =  instantiateForeseeObject.GetComponentsInChildren<Transform>();
         foreach (Transform childTransform in childrensTransform)
         {
-            if(playerId == (int)PlayerId.PLAYER_1)
+            if(playerId == (int)PlayerEnum.PlayerId.PLAYER_1)
             {
                 childTransform.gameObject.tag = TagConstants.TAG_NAME_PLAYER_1_FORESEE_PIECE;
             }
-            else if(playerId == (int)PlayerId.PLAYER_2)
+            else if(playerId == (int)PlayerEnum.PlayerId.PLAYER_2)
             {
                 childTransform.gameObject.tag = TagConstants.TAG_NAME_PLAYER_2_FORESEE_PIECE;
             }
@@ -427,8 +442,6 @@ public class GameManager : MonoBehaviour {
             instantiateForeseeObject.transform.GetChild(i).GetComponent<MeshRenderer>().material = randomPieceColor[i];
         }
 
-        PieceMovement instantiateForeseeObjectPieceMovementScript = instantiateForeseeObject.GetComponent<PieceMovement>();
-        instantiateForeseeObjectPieceMovementScript.enabled = false;
         Rigidbody foreseePieceRigidBody = instantiateForeseeObject.GetComponent<Rigidbody>();
         foreseePieceRigidBody.isKinematic = true;
         foreseePieceRigidBody.detectCollisions = false;
@@ -440,11 +453,11 @@ public class GameManager : MonoBehaviour {
 
         String targetTagName = null;
 
-        if (playerId == (int)PlayerId.PLAYER_1)
+        if (playerId == (int)PlayerEnum.PlayerId.PLAYER_1)
         {
             targetTagName = TagConstants.TAG_NAME_PLAYER_1_PIECE_CHILD;
         }
-        else if (playerId == (int)PlayerId.PLAYER_2)
+        else if (playerId == (int)PlayerEnum.PlayerId.PLAYER_2)
         {
             targetTagName = TagConstants.TAG_NAME_PLAYER_2_PIECE_CHILD;
         }
@@ -457,7 +470,7 @@ public class GameManager : MonoBehaviour {
 
     private void BuildFieldGrid(int playerId)
     {
-        GameObject fieldBackground = this.playersField[playerId].transform.GetChild(0).gameObject;
+        GameObject fieldBackground = this.PlayersField[playerId].transform.GetChild(0).gameObject;
 
         Vector3 maxRange = ElementType.CalculateGameObjectMaxRange(fieldBackground);
         //Calcul the halfsize of the field
@@ -519,39 +532,6 @@ public class GameManager : MonoBehaviour {
         Vector3 maxRange = ElementType.CalculateGameObjectMaxRange(GameField.transform.GetChild(0).gameObject);
         //Initialise the position matrix for the game elements [lines, collumns]
         this.PlayersPositionMap[playerId] = new PositionMapElement[Mathf.RoundToInt(maxRange.z), Mathf.RoundToInt(maxRange.x)];
-    }
-
-    public int PositionToMapValue(float position, int playerId)
-    {
-        int collumn = 0;
-        if (playerId == (int)PlayerId.PLAYER_1)
-        {
-            //position = i + tailles
-            collumn = (int)((ElementType.CalculateGameObjectMaxRange(this.playersField[playerId].transform.GetChild(0).gameObject).x + FIELD_MARGIN - 0.5f) - (position * -1));
-        }
-        else if (playerId == (int)PlayerId.PLAYER_2)
-        {
-            //position = i + tailles
-            collumn = (int)(position - (ElementType.CalculateGameObjectMaxRange(this.playersForeSeeWindow[playerId].transform.GetChild(0).gameObject).x + FIELD_MARGIN + 0.5f));
-        }
-
-        return collumn;
-    }
-
-    public float MapValueToPosition(int mapValue, int playerId)
-    {
-        float position = 0;
-        if (playerId == (int)PlayerId.PLAYER_1)
-        {
-            position = -1 * (ElementType.CalculateGameObjectMaxRange(this.playersField[playerId].transform.GetChild(0).gameObject).x - mapValue + FIELD_MARGIN - 0.5f);
-
-        }
-        else if (playerId == (int)PlayerId.PLAYER_2)
-        {
-            position = mapValue + ElementType.CalculateGameObjectMaxRange(this.playersForeSeeWindow[playerId].transform.GetChild(0).gameObject).x + FIELD_MARGIN + 0.5f;
-        }
-
-        return position;
     }
 
     public void DestroyObjectLines(int playerId)
@@ -631,11 +611,11 @@ public class GameManager : MonoBehaviour {
 
         String targetTagName = null;
 
-        if (playerId == (int)PlayerId.PLAYER_1)
+        if (playerId == (int)PlayerEnum.PlayerId.PLAYER_1)
         {
             targetTagName = TagConstants.TAG_NAME_PLAYER_1_PIECE_CHILD;
         }
-        else if (playerId == (int)PlayerId.PLAYER_2)
+        else if (playerId == (int)PlayerEnum.PlayerId.PLAYER_2)
         {
             targetTagName = TagConstants.TAG_NAME_PLAYER_2_PIECE_CHILD;
         }
@@ -662,11 +642,11 @@ public class GameManager : MonoBehaviour {
 
         String targetTagName = null;
 
-        if(playerId == (int)PlayerId.PLAYER_1)
+        if(playerId == (int)PlayerEnum.PlayerId.PLAYER_1)
         {
             targetTagName = TagConstants.TAG_NAME_PLAYER_1_FORESEE_PIECE;
         }
-        else if(playerId == (int)PlayerId.PLAYER_2)
+        else if(playerId == (int)PlayerEnum.PlayerId.PLAYER_2)
         {
             targetTagName = TagConstants.TAG_NAME_PLAYER_2_FORESEE_PIECE;
         }
@@ -684,11 +664,11 @@ public class GameManager : MonoBehaviour {
     {
         String targetTagName = null;
 
-        if (playerId == (int)PlayerId.PLAYER_1)
+        if (playerId == (int)PlayerEnum.PlayerId.PLAYER_1)
         {
             targetTagName = TagConstants.TAG_NAME_PLAYER_1_PIECE_CHILD;
         }
-        else if (playerId == (int)PlayerId.PLAYER_2)
+        else if (playerId == (int)PlayerEnum.PlayerId.PLAYER_2)
         {
             targetTagName = TagConstants.TAG_NAME_PLAYER_2_PIECE_CHILD;
         }
@@ -779,28 +759,10 @@ public class GameManager : MonoBehaviour {
         
     }
 
-    public GameObject FetchHighestPieceChild(int playerId)
-    {
-
-        for(int i = 0; i < this.PlayersPositionMap[playerId].GetLength(1); i++)
-        {
-            bool occupied = this.PlayersPositionMap[playerId][(int)(maxAllowedPlayableLine + 0.5f), i].IsOccupied;
-
-            if(occupied)
-            {
-                return this.PlayersPositionMap[playerId][(int)(maxAllowedPlayableLine + 0.5f), i].CurrentMapElement;
-            }
-             
-        }
-
-        return null;
-        
-    }
-
     public bool IsGameOver(int playerId)
     {
 
-        GameObject highestPieceChild = this.FetchHighestPieceChild(playerId);
+        GameObject highestPieceChild = GameFieldUtils.FetchHighestPieceInPlayerField(playerId);
 
         if(highestPieceChild == null)
         {
@@ -852,11 +814,11 @@ public class GameManager : MonoBehaviour {
     {
         String fieldTagName = null;
 
-        if (playerId == (int)GameManager.PlayerId.PLAYER_1)
+        if (playerId == (int)PlayerEnum.PlayerId.PLAYER_1)
         {
             fieldTagName = TagConstants.TAG_NAME_PLAYER_1_FIELD;
         }
-        else if (playerId == (int)GameManager.PlayerId.PLAYER_2)
+        else if (playerId == (int)PlayerEnum.PlayerId.PLAYER_2)
         {
             fieldTagName = TagConstants.TAG_NAME_PLAYER_2_FIELD;
         }
@@ -878,11 +840,11 @@ public class GameManager : MonoBehaviour {
     {
         String fieldTagName = null;
 
-        if (winnerId == (int)GameManager.PlayerId.PLAYER_1)
+        if (winnerId == (int)PlayerEnum.PlayerId.PLAYER_1)
         {
             fieldTagName = TagConstants.TAG_NAME_PLAYER_1_FIELD;
         }
-        else if (winnerId == (int)GameManager.PlayerId.PLAYER_2)
+        else if (winnerId == (int)PlayerEnum.PlayerId.PLAYER_2)
         {
             fieldTagName = TagConstants.TAG_NAME_PLAYER_2_FIELD;
         }
@@ -911,11 +873,11 @@ public class GameManager : MonoBehaviour {
 
         String targetTagName = null;
 
-        if (playerId == (int)PlayerId.PLAYER_1)
+        if (playerId == (int)PlayerEnum.PlayerId.PLAYER_1)
         {
             targetTagName = TagConstants.TAG_NAME_PLAYER_1_PIECE_CHILD;
         }
-        else if (playerId == (int)PlayerId.PLAYER_2)
+        else if (playerId == (int)PlayerEnum.PlayerId.PLAYER_2)
         {
             targetTagName = TagConstants.TAG_NAME_PLAYER_2_PIECE_CHILD;
         }
@@ -1060,6 +1022,32 @@ public class GameManager : MonoBehaviour {
         set
         {
             playersPieceNextColorsList = value;
+        }
+    }
+
+    public Dictionary<int, GameObject> PlayersField
+    {
+        get
+        {
+            return playersField;
+        }
+
+        set
+        {
+            playersField = value;
+        }
+    }
+
+    public Dictionary<int, GameObject> PlayersForeSeeWindow
+    {
+        get
+        {
+            return playersForeSeeWindow;
+        }
+
+        set
+        {
+            playersForeSeeWindow = value;
         }
     }
 }

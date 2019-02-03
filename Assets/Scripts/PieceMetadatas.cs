@@ -9,6 +9,7 @@ public class PieceMetadatas : MonoBehaviour {
     public bool isExcentered;
     public bool hasSpecificRotationBehaviour;
     private bool isSparkling;
+    private bool isPieceReady;
 
     private void FixedUpdate()
     {
@@ -71,6 +72,19 @@ public class PieceMetadatas : MonoBehaviour {
         set
         {
             isSparkling = value;
+        }
+    }
+
+    public bool IsPieceReady
+    {
+        get
+        {
+            return isPieceReady;
+        }
+
+        set
+        {
+            isPieceReady = value;
         }
     }
 }

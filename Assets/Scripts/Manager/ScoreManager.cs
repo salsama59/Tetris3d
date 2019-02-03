@@ -15,7 +15,7 @@ public class ScoreManager : MonoBehaviour {
     // Use this for initialization
     void Start ()
     {
-        for (int playerId = 0; playerId < ApplicationData.playerNumber; playerId++)
+        for (int playerId = 0; playerId < ApplicationUtils.playerNumber; playerId++)
         {
             this.SetUpScoreElements(playerId);
         }
@@ -23,7 +23,7 @@ public class ScoreManager : MonoBehaviour {
 
     private void SetUpScoreElements(int playerId)
     {
-        if(!ApplicationData.IsInMultiPlayerMode())
+        if(!ApplicationUtils.IsInMultiPlayerMode())
         {
             this.SetUpScoreElementsForOnePlayerMode(playerId);
         }
@@ -43,13 +43,13 @@ public class ScoreManager : MonoBehaviour {
         String pointTextTagName = null;
         String fieldTagName = null;
 
-        if (playerId == (int)GameManager.PlayerId.PLAYER_1)
+        if (playerId == (int)PlayerEnum.PlayerId.PLAYER_1)
         {
             scoreTextTagName = TagConstants.TAG_NAME_PLAYER_1_SCORE_TEXT;
             pointTextTagName = TagConstants.TAG_NAME_PLAYER_1_POINTS_TEXT;
             fieldTagName = TagConstants.TAG_NAME_PLAYER_1_FIELD;
         }
-        else if (playerId == (int)GameManager.PlayerId.PLAYER_2)
+        else if (playerId == (int)PlayerEnum.PlayerId.PLAYER_2)
         {
             scoreTextTagName = TagConstants.TAG_NAME_PLAYER_2_SCORE_TEXT;
             pointTextTagName = TagConstants.TAG_NAME_PLAYER_2_POINTS_TEXT;
@@ -60,15 +60,15 @@ public class ScoreManager : MonoBehaviour {
 
         Vector3 foreseeWindowSize = ElementType.CalculateGameObjectMaxRange(GameObject.FindGameObjectWithTag(TagConstants.TAG_NAME_FORESEE_WINDOW).transform.GetChild(0).gameObject);
 
-        if (playerId == (int)GameManager.PlayerId.PLAYER_1)
+        if (playerId == (int)PlayerEnum.PlayerId.PLAYER_1)
         {
-            scoreXposition = (foreseeWindowSize.x / 2 + fieldsize.x + GameManager.FIELD_MARGIN) * -1;
-            pointsXposition = (GameManager.FIELD_MARGIN + fieldsize.x / 2) * -1;
+            scoreXposition = (foreseeWindowSize.x / 2 + fieldsize.x + GameFieldUtils.FIELD_MARGIN) * -1;
+            pointsXposition = (GameFieldUtils.FIELD_MARGIN + fieldsize.x / 2) * -1;
         }
-        else if (playerId == (int)GameManager.PlayerId.PLAYER_2)
+        else if (playerId == (int)PlayerEnum.PlayerId.PLAYER_2)
         {
-            scoreXposition = foreseeWindowSize.x / 2 + GameManager.FIELD_MARGIN;
-            pointsXposition = GameManager.FIELD_MARGIN + foreseeWindowSize.x + fieldsize.x / 2;
+            scoreXposition = foreseeWindowSize.x / 2 + GameFieldUtils.FIELD_MARGIN;
+            pointsXposition = GameFieldUtils.FIELD_MARGIN + foreseeWindowSize.x + fieldsize.x / 2;
         }
 
         Vector3 scorePosition = new Vector3(
@@ -156,7 +156,7 @@ public class ScoreManager : MonoBehaviour {
         int scoreTextfontSize = 0;
         int pointTextfontSize = 0;
 
-        if (!ApplicationData.IsInMultiPlayerMode())
+        if (!ApplicationUtils.IsInMultiPlayerMode())
         {
             scoreTextfontSize = 30;
             pointTextfontSize = 23;
@@ -175,7 +175,7 @@ public class ScoreManager : MonoBehaviour {
     // Update is called once per frame
     void Update ()
     {
-        for (int playerId = 0; playerId < ApplicationData.playerNumber; playerId++)
+        for (int playerId = 0; playerId < ApplicationUtils.playerNumber; playerId++)
         {
             this.PlayersScoreText[playerId].text = "Score \n" + this.playersScrore[playerId];
         }
@@ -218,11 +218,11 @@ public class ScoreManager : MonoBehaviour {
         float pointsXposition = 0f;
         String fieldTagName = null;
 
-        if (playerId == (int)GameManager.PlayerId.PLAYER_1)
+        if (playerId == (int)PlayerEnum.PlayerId.PLAYER_1)
         {
             fieldTagName = TagConstants.TAG_NAME_PLAYER_1_FIELD;
         }
-        else if (playerId == (int)GameManager.PlayerId.PLAYER_2)
+        else if (playerId == (int)PlayerEnum.PlayerId.PLAYER_2)
         {
             fieldTagName = TagConstants.TAG_NAME_PLAYER_2_FIELD;
         }
@@ -231,13 +231,13 @@ public class ScoreManager : MonoBehaviour {
 
         Vector3 foreseeWindowSize = ElementType.CalculateGameObjectMaxRange(GameObject.FindGameObjectWithTag(TagConstants.TAG_NAME_FORESEE_WINDOW).transform.GetChild(0).gameObject);
 
-        if (playerId == (int)GameManager.PlayerId.PLAYER_1)
+        if (playerId == (int)PlayerEnum.PlayerId.PLAYER_1)
         {
-            pointsXposition = (GameManager.FIELD_MARGIN + fieldsize.x / 2) * -1;
+            pointsXposition = (GameFieldUtils.FIELD_MARGIN + fieldsize.x / 2) * -1;
         }
-        else if (playerId == (int)GameManager.PlayerId.PLAYER_2)
+        else if (playerId == (int)PlayerEnum.PlayerId.PLAYER_2)
         {
-            pointsXposition = GameManager.FIELD_MARGIN + foreseeWindowSize.x + fieldsize.x / 2;
+            pointsXposition = GameFieldUtils.FIELD_MARGIN + foreseeWindowSize.x + fieldsize.x / 2;
         }
 
         //Pieces line destroyed position calculation

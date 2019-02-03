@@ -1,28 +1,15 @@
 ﻿using UnityEngine;
 
-public class PieceMovement : MonoBehaviour {
-    Rigidbody gameObJectRigidBody;
-    Transform gameObjectTransform;
-    private GameObject field;
-    private bool isMoving;
-    private float elapsedTime;
-    public float targetElapsedtime;
-    public float timeToMoveToward;
-    public float maxRotateAmplitude;
-    private float pieceRotationSpeed;
-    private GameManager gameManagerInstance;
-    public int ownerId;
-    public GameObject pieceSwingEffect;
-    public enum Direction {RIGHT, LEFT, DOWN};
+public class PlayerPieceController : PieceController {
 
     // Use this for initialization
     void Start ()
     {
         PieceRotationSpeed = 0.4f;
-        gameManagerInstance = FindObjectOfType<GameManager>();
         IsMoving = true;
         this.gameObjectTransform = this.gameObject.GetComponent<Transform>();
         this.gameObJectRigidBody = this.gameObject.GetComponent<Rigidbody>();
+       
     }
 
     // Update is called once per frame
@@ -37,7 +24,7 @@ public class PieceMovement : MonoBehaviour {
 
             Vector3 newPosition = new Vector3();
 
-            if (Input.GetKey(DetectPlayerMovement(Direction.RIGHT)))
+            if (Input.GetKey(DetectPlayerMovement(DirectionEnum.Direction.RIGHT)))
             {
                 if(!this.IsMoveForbiden(KeyCode.RightArrow))
                 {
@@ -45,7 +32,7 @@ public class PieceMovement : MonoBehaviour {
                     this.MoveObjectToNewPosition(newPosition);
                 }
             }
-            else if (Input.GetKey(DetectPlayerMovement(Direction.LEFT)))
+            else if (Input.GetKey(DetectPlayerMovement(DirectionEnum.Direction.LEFT)))
             {
                 if (!this.IsMoveForbiden(KeyCode.LeftArrow))
                 {
@@ -54,7 +41,7 @@ public class PieceMovement : MonoBehaviour {
                 }
             }
 
-            if (Input.GetKeyDown(DetectPlayerRotation(Direction.RIGHT)))
+            if (Input.GetKeyDown(DetectPlayerRotation(DirectionEnum.Direction.RIGHT)))
             {
                 bool isClockwise = true;
                 if (MovementUtils.IsRotationPossible(this.maxRotateAmplitude, this.gameObject))
@@ -62,7 +49,7 @@ public class PieceMovement : MonoBehaviour {
                     RotateObject(isClockwise);
                 }
             }
-            else if(Input.GetKeyDown(DetectPlayerRotation(Direction.LEFT)))
+            else if(Input.GetKeyDown(DetectPlayerRotation(DirectionEnum.Direction.LEFT)))
             {
                 bool isClockwise = false;
                 if (MovementUtils.IsRotationPossible(this.maxRotateAmplitude, this.gameObject))
@@ -71,13 +58,13 @@ public class PieceMovement : MonoBehaviour {
                 }
             }
 
-            if (Input.GetKey(DetectPlayerMovement(Direction.DOWN)))
+            if (Input.GetKey(DetectPlayerMovement(DirectionEnum.Direction.DOWN)))
             {
-                newGameObjectVelocity = new Vector3(gameObJectRigidBody.velocity.x, gameObJectRigidBody.velocity.y, verticalMove * this.GetPieceMovementSpeed());
+                newGameObjectVelocity = new Vector3(gameObJectRigidBody.velocity.x, gameObJectRigidBody.velocity.y, verticalMove * GameUtils.FetchPlayerPieceSpeed(OwnerId));
             }
             else
             {
-                newGameObjectVelocity = new Vector3(this.gameObJectRigidBody.velocity.x, this.gameObJectRigidBody.velocity.y, -0.5f * this.GetPieceMovementSpeed());
+                newGameObjectVelocity = new Vector3(this.gameObJectRigidBody.velocity.x, this.gameObJectRigidBody.velocity.y, -0.5f * GameUtils.FetchPlayerPieceSpeed(OwnerId));
             }
 
             this.gameObJectRigidBody.velocity = newGameObjectVelocity;
@@ -85,41 +72,41 @@ public class PieceMovement : MonoBehaviour {
     }
 
 
-    private KeyCode DetectPlayerMovement(Direction direction)
+    private KeyCode DetectPlayerMovement(DirectionEnum.Direction direction)
     {
 
         KeyCode expectedKey = 0;
 
         switch (this.OwnerId)
         {
-            case (int)GameManager.PlayerId.PLAYER_1 :
+            case (int)PlayerEnum.PlayerId.PLAYER_1 :
 
-                if(direction == Direction.LEFT)
+                if(direction == DirectionEnum.Direction.LEFT)
                 {
                     expectedKey = KeyCode.Q;
                 }
-                else if(direction == Direction.RIGHT)
+                else if(direction == DirectionEnum.Direction.RIGHT)
                 {
                     expectedKey = KeyCode.D;
                 }
-                else if(direction == Direction.DOWN)
+                else if(direction == DirectionEnum.Direction.DOWN)
                 {
                     expectedKey = KeyCode.W;
                 }
                 
                 break;
 
-            case (int)GameManager.PlayerId.PLAYER_2:
+            case (int)PlayerEnum.PlayerId.PLAYER_2:
 
-                if (direction == Direction.LEFT)
+                if (direction == DirectionEnum.Direction.LEFT)
                 {
                     expectedKey = KeyCode.LeftArrow;
                 }
-                else if (direction == Direction.RIGHT)
+                else if (direction == DirectionEnum.Direction.RIGHT)
                 {
                     expectedKey = KeyCode.RightArrow;
                 }
-                else if (direction == Direction.DOWN)
+                else if (direction == DirectionEnum.Direction.DOWN)
                 {
                     expectedKey = KeyCode.DownArrow;
                 }
@@ -133,32 +120,32 @@ public class PieceMovement : MonoBehaviour {
         return expectedKey;
     }
 
-    private KeyCode DetectPlayerRotation(Direction direction)
+    private KeyCode DetectPlayerRotation(DirectionEnum.Direction direction)
     {
 
         KeyCode expectedKey = 0;
 
         switch (this.OwnerId)
         {
-            case (int)GameManager.PlayerId.PLAYER_1:
+            case (int)PlayerEnum.PlayerId.PLAYER_1:
 
-                if (direction == Direction.LEFT)
+                if (direction == DirectionEnum.Direction.LEFT)
                 {
                     expectedKey = KeyCode.LeftAlt;
                 }
-                else if (direction == Direction.RIGHT)
+                else if (direction == DirectionEnum.Direction.RIGHT)
                 {
                     expectedKey = KeyCode.Space;
                 }
                 break;
 
-            case (int)GameManager.PlayerId.PLAYER_2:
+            case (int)PlayerEnum.PlayerId.PLAYER_2:
 
-                if (direction == Direction.LEFT)
+                if (direction == DirectionEnum.Direction.LEFT)
                 {
                     expectedKey = KeyCode.RightAlt;
                 }
-                else if (direction == Direction.RIGHT)
+                else if (direction == DirectionEnum.Direction.RIGHT)
                 {
                     expectedKey = KeyCode.RightControl;
                 }
@@ -207,15 +194,6 @@ public class PieceMovement : MonoBehaviour {
         Instantiate(pieceSwingEffect, this.gameObjectTransform.position, Quaternion.identity);
     }
 
-    private void MoveObjectToNewPosition(Vector3 newPosition)
-    {
-        if (elapsedTime >= targetElapsedtime)
-        {
-            elapsedTime = 0;
-            this.gameObjectTransform.position = Vector3.Lerp(this.gameObjectTransform.position, newPosition, timeToMoveToward);
-        }
-    }
-
     private bool IsMoveForbiden(KeyCode keyPushed)
     {
         Vector3 movementDirection = new Vector3();
@@ -235,60 +213,5 @@ public class PieceMovement : MonoBehaviour {
         return !MovementUtils.IsMovementPossible(movementDirection, this.gameObject);
     }
 
-    private float GetPieceMovementSpeed()
-    {
-        return gameManagerInstance.PlayersPiecesMovementSpeed[this.OwnerId];
-    }
 
-    public bool IsMoving
-    {
-        get
-        {
-            return isMoving;
-        }
-
-        set
-        {
-            isMoving = value;
-        }
-    }
-
-    public GameObject Field
-    {
-        get
-        {
-            return field;
-        }
-
-        set
-        {
-            field = value;
-        }
-    }
-
-    public float PieceRotationSpeed
-    {
-        get
-        {
-            return pieceRotationSpeed;
-        }
-
-        set
-        {
-            pieceRotationSpeed = value;
-        }
-    }
-
-    public int OwnerId
-    {
-        get
-        {
-            return ownerId;
-        }
-
-        set
-        {
-            ownerId = value;
-        }
-    }
 }
