@@ -2,12 +2,16 @@
 
 public class PlayerPieceController : PieceController {
 
+    public override void Awake()
+    {
+        base.Awake();
+    }
+
     // Use this for initialization
     void Start ()
     {
         PieceRotationSpeed = 0.4f;
         IsMoving = true;
-        this.gameObjectTransform = this.gameObject.GetComponent<Transform>();
         this.gameObJectRigidBody = this.gameObject.GetComponent<Rigidbody>();
        
     }
@@ -28,7 +32,7 @@ public class PlayerPieceController : PieceController {
             {
                 if(!this.IsMoveForbiden(KeyCode.RightArrow))
                 {
-                    newPosition = this.gameObjectTransform.position + Vector3.right;
+                    newPosition = this.transform.position + Vector3.right;
                     this.MoveObjectToNewPosition(newPosition);
                 }
             }
@@ -36,7 +40,7 @@ public class PlayerPieceController : PieceController {
             {
                 if (!this.IsMoveForbiden(KeyCode.LeftArrow))
                 {
-                    newPosition = this.gameObjectTransform.position + Vector3.left;
+                    newPosition = this.transform.position + Vector3.left;
                     this.MoveObjectToNewPosition(newPosition);
                 }
             }
@@ -69,55 +73,6 @@ public class PlayerPieceController : PieceController {
 
             this.gameObJectRigidBody.velocity = newGameObjectVelocity;
         }
-    }
-
-
-    private KeyCode DetectPlayerMovement(DirectionEnum.Direction direction)
-    {
-
-        KeyCode expectedKey = 0;
-
-        switch (this.OwnerId)
-        {
-            case (int)PlayerEnum.PlayerId.PLAYER_1 :
-
-                if(direction == DirectionEnum.Direction.LEFT)
-                {
-                    expectedKey = KeyCode.Q;
-                }
-                else if(direction == DirectionEnum.Direction.RIGHT)
-                {
-                    expectedKey = KeyCode.D;
-                }
-                else if(direction == DirectionEnum.Direction.DOWN)
-                {
-                    expectedKey = KeyCode.W;
-                }
-                
-                break;
-
-            case (int)PlayerEnum.PlayerId.PLAYER_2:
-
-                if (direction == DirectionEnum.Direction.LEFT)
-                {
-                    expectedKey = KeyCode.LeftArrow;
-                }
-                else if (direction == DirectionEnum.Direction.RIGHT)
-                {
-                    expectedKey = KeyCode.RightArrow;
-                }
-                else if (direction == DirectionEnum.Direction.DOWN)
-                {
-                    expectedKey = KeyCode.DownArrow;
-                }
-
-                break;
-
-            default:
-                break;
-        }
-
-        return expectedKey;
     }
 
     private KeyCode DetectPlayerRotation(DirectionEnum.Direction direction)
@@ -171,27 +126,27 @@ public class PlayerPieceController : PieceController {
         //Wanted rotation calculation 
         Quaternion newrotation = Quaternion.Euler(new Vector3(Quaternion.identity.x, yAxeRotation, Quaternion.identity.z));
         //The from rotation
-        Quaternion originRotation = this.gameObjectTransform.rotation;
+        Quaternion originRotation = this.transform.rotation;
         //The to rotation
         Quaternion destinationRotation = originRotation * newrotation;
         //Rotate smoothly
-        this.gameObjectTransform.rotation = Quaternion.Slerp(originRotation, destinationRotation, Mathf.Clamp(Time.time * PieceRotationSpeed, 0f, 1f));
+        this.transform.rotation = Quaternion.Slerp(originRotation, destinationRotation, Mathf.Clamp(Time.time * PieceRotationSpeed, 0f, 1f));
 
         if (pieceMetadatas.HasSpecificRotationBehaviour)
         {
-            float currentYRotationValue = this.gameObjectTransform.rotation.eulerAngles.y;
+            float currentYRotationValue = this.transform.rotation.eulerAngles.y;
 
             if (currentYRotationValue == 90f || currentYRotationValue == 270f)
             {
-                this.gameObjectTransform.position = this.gameObjectTransform.position + (Vector3.right / 2);
+                this.transform.position = this.transform.position + (Vector3.right / 2);
             }
             else
             {
-                this.gameObjectTransform.position = this.gameObjectTransform.position + (Vector3.left / 2);
+                this.transform.position = this.transform.position + (Vector3.left / 2);
             }
         }
 
-        Instantiate(pieceSwingEffect, this.gameObjectTransform.position, Quaternion.identity);
+        Instantiate(pieceSwingEffect, this.transform.position, Quaternion.identity);
     }
 
     private bool IsMoveForbiden(KeyCode keyPushed)

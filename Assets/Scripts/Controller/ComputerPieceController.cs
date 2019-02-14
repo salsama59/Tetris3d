@@ -7,6 +7,10 @@ public class ComputerPieceController : PieceController
     private Transform targetTransform;
     private IaData iaData;
 
+    public override void Awake()
+    {
+        base.Awake();
+    }
 
     // Use this for initialization
     void Start()
@@ -14,7 +18,6 @@ public class ComputerPieceController : PieceController
         
         this.PieceRotationSpeed = 0.4f;
         this.IsMoving = true;
-        this.gameObjectTransform = this.gameObject.GetComponent<Transform>();
         this.gameObJectRigidBody = this.gameObject.GetComponent<Rigidbody>();
 
         if (IsPieceValidForPlay())
@@ -120,7 +123,7 @@ public class ComputerPieceController : PieceController
         Vector3 newPosition = new Vector3();
         if (!this.IsMoveForbiden(direction))
         {
-            newPosition = this.gameObjectTransform.position + direction;
+            newPosition = this.transform.position + direction;
             this.MoveObjectToNewPosition(newPosition);
         }
     }

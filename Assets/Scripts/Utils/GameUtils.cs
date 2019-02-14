@@ -4,6 +4,11 @@ using UnityEngine;
 
 public class GameUtils : MonoBehaviour {
 
+    public static GameObject FetchGraphicInterface()
+    {
+        return GameObject.FindGameObjectWithTag(TagConstants.TAG_NAME_CANVAS_GRAPHIC_INTERFACE);
+    }
+
 	public static GameManager FetchGameManagerScript()
     {
         GameObject gameManagerObject = GameObject.FindGameObjectWithTag(TagConstants.TAG_NAME_GAME_MANAGER);

@@ -337,19 +337,6 @@ public class GameManager : MonoBehaviour {
     private void ManageGameFieldObject(GameObject piece, int playerId, Quaternion randomInstanciationRotation, List<Material> randomPieceColor)
     {
 
-        PieceController genericPieceController;
-
-        if (playerId == (int)PlayerEnum.PlayerId.PLAYER_2)
-        {
-            genericPieceController = PieceUtils.FetchPiecePlayerPieceControllerScript(piece);
-        }
-        else
-        {
-            genericPieceController = PieceUtils.FetchPieceComputerPieceControllerScript(piece);
-        }
-
-        genericPieceController.enabled = true;
-
         PieceMetadatas pieceMetadatas = PieceUtils.FetchPieceMetadataScript(piece);
 
         float positionCorrection = 0f;
@@ -359,10 +346,8 @@ public class GameManager : MonoBehaviour {
             positionCorrection = 0.5f;
         }
 
-        genericPieceController.OwnerId = playerId;
-
         GameObject field = this.PlayersField[playerId];
-        genericPieceController.Field = field;
+
         Vector3 fieldsize = ElementType.CalculateGameObjectMaxRange(field.transform.transform.GetChild(0).gameObject);
 
         Vector3 instantiatePosition = new Vector3(
@@ -372,6 +357,21 @@ public class GameManager : MonoBehaviour {
         
         GameObject instanciatedPiece = Instantiate(piece, instantiatePosition, randomInstanciationRotation);
 
+
+        PieceController genericController = null;
+
+        if (ApplicationUtils.IsTypeComputer(playerId))
+        {
+            genericController = PieceUtils.FetchPieceComputerPieceControllerScript(instanciatedPiece);
+        }
+        else
+        {
+            genericController = PieceUtils.FetchPiecePlayerPieceControllerScript(instanciatedPiece);
+        }
+
+        genericController.enabled = true;
+        genericController.OwnerId = playerId;
+        genericController.Field = field;
         
         for (int i = 0; i < randomPieceColor.Count; i++)
         {
@@ -442,9 +442,24 @@ public class GameManager : MonoBehaviour {
             instantiateForeseeObject.transform.GetChild(i).GetComponent<MeshRenderer>().material = randomPieceColor[i];
         }
 
-        Rigidbody foreseePieceRigidBody = instantiateForeseeObject.GetComponent<Rigidbody>();
-        foreseePieceRigidBody.isKinematic = true;
-        foreseePieceRigidBody.detectCollisions = false;
+        Rigidbody instantiatedForeseePieceRigidBody = instantiateForeseeObject.GetComponent<Rigidbody>();
+        instantiatedForeseePieceRigidBody.isKinematic = true;
+        instantiatedForeseePieceRigidBody.detectCollisions = false;
+
+        List<PieceController> pieceControllerList = new List<PieceController>
+        {
+            PieceUtils.FetchPiecePlayerPieceControllerScript(instantiateForeseeObject),
+            PieceUtils.FetchPieceComputerPieceControllerScript(instantiateForeseeObject)
+        };
+
+        foreach(PieceController pieceController in pieceControllerList)
+        {
+            if(pieceController != null)
+            {
+                pieceController.enabled = false;
+                pieceController.IsMoving = false;
+            }  
+        }
     }
 
     private void UpdatePieceChildrenTagName(int playerId, GameObject instanciatedPiece)

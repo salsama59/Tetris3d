@@ -21,4 +21,7 @@
     public const string TAG_NAME_MAIN_MENU_SOUND = "MainMenuSound";
     public const string TAG_NAME_ONE_PLAYER_MODE_SOUND = "OnePlayerModeSound";
     public const string TAG_NAME_TWO_PLAYER_MODE_SOUND = "TwoPlayerModeSound";
+    public const string TAG_NAME_CANVAS_GRAPHIC_INTERFACE = "CanvasGraphicInterFace";
+    public const string TAG_NAME_PLAYER_AFFECTION_PANEL = "PlayerAffectationPanel";
+    public const string TAG_NAME_MAIN_MENU_BUTTON = "MainMenuButton";
 }

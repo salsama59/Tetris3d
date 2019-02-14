@@ -3,12 +3,15 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using System.Linq;
 
 public class ButtonsController : MonoBehaviour
 {
     public GameObject[] mainMenuButtons;
     public GameObject[] localModeSubMenuButtons;
     public GameObject[] versusModeSubMenuButtons;
+    public GameObject versusModeOptionsPanel;
+    public GameObject playerSideSelectionPanel;
 
     private void Start()
     {
@@ -29,25 +32,63 @@ public class ButtonsController : MonoBehaviour
 
     public void LaunchTwoPlayerMode()
     {
-        ApplicationUtils.playerNumber = 2;
-        this.LaunchGame(SceneConstants.SCENE_NAME_TWO_PLAYER_MODE);
-    }
-
-    public void LaunchVersusMatch(Dictionary<int, string> playersAffectations)
-    {
-        ApplicationUtils.playerNumber = 2;
-
-        for(int i = 0; i < ApplicationUtils.playerNumber; i++)
-        {
-            ApplicationUtils.AffectPlayer(i, playersAffectations[i]);
-        }
-
         this.LaunchGame(SceneConstants.SCENE_NAME_TWO_PLAYER_MODE);
     }
 
     public void DisplayVersusModeSubMenu1()
     {
-        this.SwitchMenu(true, MenuEnum.MenuId.VERSUS_MODE, versusModeSubMenuButtons);
+
+        ApplicationUtils.playerNumber = 2;
+
+        this.ManageCurrentDisplay();
+
+        GameObject graphicInterface = GameUtils.FetchGraphicInterface();
+
+        RectTransform graphicInterfaceRectTransform = graphicInterface.GetComponent<RectTransform>();
+
+        GameObject instantiatedVersusModePanel = Instantiate(versusModeOptionsPanel);
+
+        instantiatedVersusModePanel.transform.SetParent(graphicInterface.transform, false);
+
+        Button instantiatedVersusModePanelButton = instantiatedVersusModePanel.GetComponentsInChildren<Transform>()
+                        .Where(child => child.gameObject.CompareTag(TagConstants.TAG_NAME_MAIN_MENU_BUTTON))
+                        .Select(child => child.GetComponent<Button>())
+                        .First();
+        instantiatedVersusModePanelButton.onClick.AddListener(this.LaunchTwoPlayerMode);
+
+        RectTransform instantiatedVersusModePanelRectTransform = instantiatedVersusModePanel.GetComponent<RectTransform>();
+        instantiatedVersusModePanelRectTransform.anchoredPosition3D = Vector3.zero;
+
+        for (int i = 0; i < ApplicationUtils.playerNumber; i++)
+        {
+            GameObject instantiatedPlayerSideSelectionPanel = Instantiate(playerSideSelectionPanel);
+            RectTransform instantiatedPlayerPanelRectTransform = instantiatedPlayerSideSelectionPanel.GetComponent<RectTransform>();
+            
+            instantiatedPlayerSideSelectionPanel.transform.SetParent(graphicInterface.transform, false);
+           
+            PlayerPanelController playerPanelControllerScript = instantiatedPlayerSideSelectionPanel.GetComponent<PlayerPanelController>();
+            playerPanelControllerScript.OwnerId = i;
+            instantiatedPlayerPanelRectTransform.anchoredPosition3D = new Vector3(0, playerPanelControllerScript.CalculateTargetYposition(graphicInterfaceRectTransform), 0);
+
+            Image instantiatedPlayerSideSelectionPanelImage = instantiatedPlayerSideSelectionPanel.GetComponent<Image>();
+            instantiatedPlayerSideSelectionPanelImage.color = ApplicationUtils.GetPlayerColor(i);
+
+            Text instantiatedPlayerSideSelectionPanelText = instantiatedPlayerSideSelectionPanel.GetComponentInChildren<Text>();
+
+            string playerNumberId = "";
+
+            if((int)PlayerEnum.PlayerId.PLAYER_1 == i)
+            {
+                playerNumberId = "1";
+            }
+            else if((int)PlayerEnum.PlayerId.PLAYER_2 == i)
+            {
+                playerNumberId = "2";
+            }
+
+            instantiatedPlayerSideSelectionPanelText.text = instantiatedPlayerSideSelectionPanelText.text.Replace("{0}", playerNumberId);
+        }
+
     }
 
     public void DisplayLocalModeSubMenu1()
