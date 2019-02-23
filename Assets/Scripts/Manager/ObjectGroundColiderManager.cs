@@ -13,25 +13,27 @@ public class ObjectGroundColiderManager : MonoBehaviour
         //if a piece child collide with something other than the background
         if(isOtherColliderHasPieceChildTag && this.IsCollisionAccepted())
         {
+            
             bool isThisColliderHasPieceChildTag = this.CompareTag(TagConstants.TAG_NAME_PLAYER_1_PIECE_CHILD) || this.CompareTag(TagConstants.TAG_NAME_PLAYER_2_PIECE_CHILD);
-            PlayerPieceController parentPieceMovementScript = null;
+            PieceController genericParentPieceMovementScript = null;
 
             if (other.transform.parent == null && isOtherColliderHasPieceChildTag && this.transform.parent != null && isThisColliderHasPieceChildTag)
             {
-                parentPieceMovementScript = this.GetComponentInParent<PlayerPieceController>();
+                genericParentPieceMovementScript = PieceUtils.FetchCurrentlyActivatedPieceControllerScript(this.transform.parent.gameObject);
             }
             else
             {
-                parentPieceMovementScript = other.GetComponentInParent<PlayerPieceController>();
+                GameObject otherParent = other.transform.parent != null ? other.transform.parent.gameObject : other.transform.gameObject;
+                genericParentPieceMovementScript = PieceUtils.FetchCurrentlyActivatedPieceControllerScript(otherParent);
             }
 
-            if(parentPieceMovementScript == null)
+            if(genericParentPieceMovementScript == null)
             {
                 return;
             }
 
             //If the piece are moving
-            if (parentPieceMovementScript.IsMoving)
+            if (genericParentPieceMovementScript.IsMoving)
             {
                 if (this.IsContactFromBelow(other))
                 {
@@ -43,7 +45,7 @@ public class ObjectGroundColiderManager : MonoBehaviour
 
                     GameObject gameManagerObject = GameObject.FindGameObjectWithTag(TagConstants.TAG_NAME_GAME_MANAGER);
                     GameManager gameManagerScript = gameManagerObject.GetComponent<GameManager>();
-                    parentPieceMovementScript.IsMoving = false;
+                    genericParentPieceMovementScript.IsMoving = false;
                     objectColidingParentRigidBody.velocity = Vector3.zero;
                     objectColidingParentRigidBody.isKinematic = true;
 
@@ -72,15 +74,15 @@ public class ObjectGroundColiderManager : MonoBehaviour
 
                     Instantiate(pieceFallSoundEffect, other.transform.position, Quaternion.identity);
                     this.CorrectPiecePosition(objectColidingParentRigidBody.gameObject);
-                    this.UpdateMapDatasForObject(objectColidingParentRigidBody.gameObject, gameManagerScript, parentPieceMovementScript.OwnerId);
-                    gameManagerScript.CleanUpPieceObject(objectColidingParentRigidBody.gameObject, parentPieceMovementScript.OwnerId);
-                    gameManagerScript.DestroyObjectLines(parentPieceMovementScript.OwnerId);
+                    this.UpdateMapDatasForObject(objectColidingParentRigidBody.gameObject, gameManagerScript, genericParentPieceMovementScript.OwnerId);
+                    gameManagerScript.CleanUpPieceObject(objectColidingParentRigidBody.gameObject, genericParentPieceMovementScript.OwnerId);
+                    gameManagerScript.DestroyObjectLines(genericParentPieceMovementScript.OwnerId);
                     //test for the game over requirements
-                    if (gameManagerScript.IsGameOver(parentPieceMovementScript.OwnerId))
+                    if (gameManagerScript.IsGameOver(genericParentPieceMovementScript.OwnerId))
                     {
-                        gameManagerScript.GameOver(parentPieceMovementScript.OwnerId);
+                        gameManagerScript.GameOver(genericParentPieceMovementScript.OwnerId);
 
-                        int winnerId = parentPieceMovementScript.OwnerId == (int)PlayerEnum.PlayerId.PLAYER_1 ? (int)PlayerEnum.PlayerId.PLAYER_2 : (int)PlayerEnum.PlayerId.PLAYER_1;
+                        int winnerId = genericParentPieceMovementScript.OwnerId == (int)PlayerEnum.PlayerId.PLAYER_1 ? (int)PlayerEnum.PlayerId.PLAYER_2 : (int)PlayerEnum.PlayerId.PLAYER_1;
 
                         if (ApplicationUtils.IsInMultiPlayerMode())
                         {
@@ -91,7 +93,7 @@ public class ObjectGroundColiderManager : MonoBehaviour
 
                     if(!gameManagerScript.Restart)
                     {
-                        gameManagerScript.PlayersSpawnAuthorisation[parentPieceMovementScript.OwnerId] = true;
+                        gameManagerScript.PlayersSpawnAuthorisation[genericParentPieceMovementScript.OwnerId] = true;
                     }
                     
                 }

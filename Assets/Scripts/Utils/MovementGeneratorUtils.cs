@@ -5,7 +5,6 @@ public class MovementGeneratorUtils : MonoBehaviour {
 
     public static void SimulateNextTranslation(GameObject currentSimulatedObject, Vector3 direction)
     {
-        //GameObject simulatedObjectClone = ClonePieceObject(currentSimulatedObject);
         currentSimulatedObject.transform.SetPositionAndRotation(new Vector3(currentSimulatedObject.transform.position.x + direction.x
             , currentSimulatedObject.transform.position.y + direction.y
             , currentSimulatedObject.transform.position.z + direction.z), currentSimulatedObject.transform.rotation);
@@ -13,9 +12,8 @@ public class MovementGeneratorUtils : MonoBehaviour {
 
     public static void SimulateNextRotation(GameObject currentSimulatedObject, bool isClockwise)
     {
-        //GameObject simulatedObjectClone = ClonePieceObject(currentSimulatedObject);
+       
         float yAxeRotation = MovementUtils.rotationAmount;
-       // PieceMetadatas pieceMetadatas = currentSimulatedObject.GetComponent<PieceMetadatas>();
 
         if (!isClockwise)
         {

@@ -20,6 +20,23 @@ public class PieceUtils : MonoBehaviour {
         return parentPiece.GetComponent<PlayerPieceController>();
     }
 
+    public static PieceController FetchCurrentlyActivatedPieceControllerScript(GameObject parentPiece)
+    {
+        PieceController[] monoBehaviourScripts = parentPiece.GetComponents<PieceController>()
+            .Where(script =>  script.enabled)
+            .ToArray();
+
+        if (monoBehaviourScripts.Length == 0)
+        {
+            return null;
+        }
+        else
+        {
+            return monoBehaviourScripts.First() as PieceController;
+        }
+    }
+        
+
     public static GameObject ClonePieceObject(GameObject parentPieceObjectToBeCloned)
     {
 

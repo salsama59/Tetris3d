@@ -9,7 +9,7 @@ public class AiUtils : MonoBehaviour {
     //Vérifie pour une pièce donnée si le placement donnera lieu à des trou dans des lignes
     //FIXME les trous de la piece en elle meme ne sont pas pris en compte dans le calcul, il faut le faire dans un second temps
     //la liste de position correspond à l'intervale minimum testé qui sera déterminé en fonction de la largeur de la pièce actuelle (pièce parent)
-	public static bool IsLineGapPossible(GameObject pieceParent, List<Vector3> piecePositions)
+	public static bool IsLineGapPossible(GameObject pieceParent, List<Vector3> piecePositions, int playerId)
     {
         
         List<Transform> referencesTransforms = new List<Transform>();
@@ -39,7 +39,9 @@ public class AiUtils : MonoBehaviour {
         //Gouper les enfants par colonnes et ne garder que les enfants dont la hauteur sur z est la moins élevée
         foreach (Transform transform in referencesTransforms)
         {
-            int transformDictionaryKey = Mathf.RoundToInt(transform.position.x - 0.5f);
+            int transformDictionaryKey = 0;
+     
+            transformDictionaryKey = (int)Mathf.Round(transform.position.x - 0.5f);
 
             if (transformDictionnary.ContainsKey(transformDictionaryKey))
             {
@@ -47,7 +49,7 @@ public class AiUtils : MonoBehaviour {
             }
             else
             {
-                transformDictionnary.Add(Mathf.RoundToInt(transform.position.x - 0.5f), transform);
+                transformDictionnary.Add(transformDictionaryKey, transform);
             }
             
         }
@@ -68,14 +70,13 @@ public class AiUtils : MonoBehaviour {
         //Calculer la distances avec la pièce du bas pour chacun des enfants et définir la plus petite des distances
         foreach (Vector3 position in piecePositions)
         {
-            int synchro = Mathf.RoundToInt(position.x - 0.5f);
+            int synchro = (int)Mathf.Round(position.x - 0.5f);
+           
             Transform currentChild = transformDictionnary[synchro];
 
             float distance = Mathf.Abs(position.z - currentChild.position.z - 1f);
 
             distanceList.Add(distance);
-
-            //Debug.Log(distance);
 
         }
 
@@ -85,11 +86,7 @@ public class AiUtils : MonoBehaviour {
 
     public static List<Vector3> GetBottomPiecePositions(int playerId, GameObject parentPiece)
     {
-        Debug.Log("**** GetBottomPiecePositions begin ****");
         List<Vector3> piecePositions = new List<Vector3>();
-
-        Debug.Log("parentPiece.name = " + parentPiece.name);
-        Debug.Log("parentPiece.transform.position = " + parentPiece.transform.position);
         Transform[] childrenTransform = parentPiece
             .GetComponentsInChildren<Transform>()
             .Where(childTransform => childTransform.gameObject != parentPiece)
@@ -101,7 +98,6 @@ public class AiUtils : MonoBehaviour {
 
         if (highestPiece == null)
         {
-            Debug.Log("**** GetBottomPiecePositions end ****");
             return null;
         }
 
@@ -113,12 +109,10 @@ public class AiUtils : MonoBehaviour {
 
         if (childrenTransform.Length == 1)
         {
-            Debug.Log("**** GetBottomPiecePositions end ****");
             return GetPositionListForSingleChild(playerId, piecePositions, childrenTransform, playerPositionMapElement, playerField, playerForSeeWindow, mapVerticalStartPosition);
         }
         else
         {
-            Debug.Log("**** GetBottomPiecePositions end ****");
             return GetPositionListForMultipleChild(playerId, piecePositions, childrenTransform, playerPositionMapElement, playerField, playerForSeeWindow, mapVerticalStartPosition);
         }
         
@@ -126,14 +120,13 @@ public class AiUtils : MonoBehaviour {
 
     public static IaData CalculateAction(GameObject currentSimulatedObject, int sideId)
     {
-        Debug.Log("**** CalculateAction start ****");
+
         GameObject simulatedObjectClone = PieceUtils.ClonePieceObject(currentSimulatedObject);
 
         IaData iaInformations = new IaData();
 
         Transform transform;
         //position map elements => [lines, collumns]
-        Debug.Log("Trying to simulate right");
         transform = SimulateMovement(Vector3.right, simulatedObjectClone, sideId);
 
         if(transform != null)
@@ -141,13 +134,11 @@ public class AiUtils : MonoBehaviour {
             iaInformations.TargetPosition = transform.position;
             iaInformations.TargetRotation = transform.rotation;
             Destroy(simulatedObjectClone);
-            Debug.Log("**** CalculateAction end ****");
             return iaInformations;
         }
 
         simulatedObjectClone.transform.SetPositionAndRotation(currentSimulatedObject.transform.position, currentSimulatedObject.transform.rotation);
 
-        Debug.Log("Trying to simulate left");
         transform = SimulateMovement(Vector3.left, simulatedObjectClone, sideId);
 
         if (transform == null)
@@ -162,7 +153,6 @@ public class AiUtils : MonoBehaviour {
         }
 
         Destroy(simulatedObjectClone);
-        Debug.Log("**** CalculateAction end ****");
         return iaInformations;
     }
 
@@ -172,20 +162,17 @@ public class AiUtils : MonoBehaviour {
         bool isCurrentSimulationInProgress = true;
         while (isCurrentSimulationInProgress)
         {
-            bool possible = IsLineGapPossible(objectClone, GetBottomPiecePositions(playerSide, objectClone));
-            Debug.Log("Gap is possible ??? => " + possible);
+            bool possible = IsLineGapPossible(objectClone, GetBottomPiecePositions(playerSide, objectClone), playerSide);
+
             if (possible)
             {
                 bool isMovePossible = MovementUtils.IsMovementPossible(direction, objectClone);
                 if (isMovePossible)
                 {
-                    Debug.Log("IsMovementPossible => " + isMovePossible);
                     MovementGeneratorUtils.SimulateNextTranslation(objectClone, direction);
-                    Debug.Log("Move to  => " + objectClone.transform.position);
                 }
                 else
                 {
-                    Debug.Log("Did not find a rigth location");
                     return null;
                 }
                 
@@ -202,7 +189,7 @@ public class AiUtils : MonoBehaviour {
 
     private static List<Vector3> GetPositionListForMultipleChild(int playerId, List<Vector3> piecePositions, Transform[] childrenTransform, PositionMapElement[,] playerPositionMapElement, GameObject playerField, GameObject playerForSeeWindow, int mapVerticalStartPosition)
     {
-        Debug.Log("**** GetPositionListForMultipleChild start ****");
+
         int mapMinHorizontalPosition;
         int mapMaxHorizontalPosition;
         if (ApplicationUtils.IsInMultiPlayerMode())
@@ -220,7 +207,6 @@ public class AiUtils : MonoBehaviour {
         {
             for (int j = mapVerticalStartPosition; j >= 0; j--)
             {
-                Debug.Log("i = " + i + " j = " + j);
                 if (playerPositionMapElement[j, i].IsOccupied)
                 {
                     piecePositions.Add(playerPositionMapElement[j, i].CurrentMapElement.transform.position);
@@ -229,17 +215,16 @@ public class AiUtils : MonoBehaviour {
 
                 if (j == 0)
                 {
-                    piecePositions.Add(new Vector3(i + 0.5f, 0.5f, -0.5f));
+                    piecePositions.Add(new Vector3(GameFieldUtils.MapValueToPosition(i, playerId, playerField, playerForSeeWindow), 0.5f, -0.5f));
                 }
             }
         }
-        Debug.Log("**** GetPositionListForMultipleChild end ****");
+
         return piecePositions;
     }
 
     private static List<Vector3> GetPositionListForSingleChild(int playerId, List<Vector3> piecePositions, Transform[] childrenTransform, PositionMapElement[,] playerPositionMapElement, GameObject playerField, GameObject playerForSeeWindow, int mapVerticalStartPosition)
     {
-        Debug.Log("**** GetPositionListForSingleChild start ****");
         int mapSingleHorizontalPosition;
 
         if (ApplicationUtils.IsInMultiPlayerMode())
@@ -253,14 +238,12 @@ public class AiUtils : MonoBehaviour {
 
         for (int j = mapVerticalStartPosition; j > 0; j--)
         {
-            Debug.Log("i = " + mapSingleHorizontalPosition + " j = " + j);
             if (playerPositionMapElement[j, mapSingleHorizontalPosition].IsOccupied)
             {
                 piecePositions.Add(playerPositionMapElement[j, mapSingleHorizontalPosition].CurrentMapElement.transform.position);
                 break;
             }
         }
-        Debug.Log("**** GetPositionListForSingleChild end ****");
         return piecePositions;
     }
 

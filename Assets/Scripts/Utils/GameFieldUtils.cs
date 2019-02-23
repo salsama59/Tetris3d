@@ -52,7 +52,7 @@ public class GameFieldUtils : MonoBehaviour {
         }
 
         GameObject[] pieceChildList = GameObject.FindGameObjectsWithTag(tag)
-            .Where(childObject => childObject.transform.parent == null)
+            .Where(childObject => childObject.transform.parent == null /*&& childObject.layer == LayerMask.NameToLayer(LayerConstants.LAYER_NAME_DESTROYABLE_PIECE)*/)
             .OrderByDescending(childObject => childObject.transform.position.z)
             .ToArray();
 
