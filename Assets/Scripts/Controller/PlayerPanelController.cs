@@ -1,8 +1,10 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
+using UnityEngine.UI;
 
-public class PlayerPanelController : PieceController
+public class PlayerPanelController : GenericElementController
 {
     private bool isAtTheMiddle;
     private bool isAtTheLeft;
@@ -12,6 +14,10 @@ public class PlayerPanelController : PieceController
     private float leftTargetPosition;
     private bool isChoiceMade;
     private bool isRegistered;
+    private bool isInputBlocked;
+
+    public GameObject panelMoveEffect;
+    public GameObject confirmEffect;
 
     public override void Awake()
     {
@@ -23,11 +29,12 @@ public class PlayerPanelController : PieceController
 
         GameObject graphicInterface = GameUtils.FetchGraphicInterface();
         RectTransform interfaceRectTransform = graphicInterface.GetComponent<RectTransform>();
+        
         this.IsMoving = true;
         this.IsAtTheLeft = false;
         this.IsAtTheMiddle = true;
         this.IsAtTheRight = false;
-
+        this.isInputBlocked = false;
         MiddleTargetPosition = 0;
         RightTargetPosition = this.GetRightPositionValue(interfaceRectTransform);
         LeftTargetPosition = this.GetLeftPositionValue(interfaceRectTransform);
@@ -57,31 +64,45 @@ public class PlayerPanelController : PieceController
             }
         }
 
-        if (Input.GetKeyUp(KeyCode.Space) && (int)PlayerEnum.PlayerId.PLAYER_1 == this.OwnerId)
+        if (Input.GetKeyDown(KeyCode.Space) && (int)PlayerEnum.PlayerId.PLAYER_1 == this.OwnerId && !this.isInputBlocked)
         {
             this.ManagePlayerPanelInformation();
+            this.isInputBlocked = true;
+        }
+        else if(Input.GetKeyUp(KeyCode.Space) && (int)PlayerEnum.PlayerId.PLAYER_1 == this.OwnerId && this.isInputBlocked)
+        {
+            this.isInputBlocked = false;
         }
 
-        if (Input.GetKeyUp(KeyCode.KeypadEnter) && (int)PlayerEnum.PlayerId.PLAYER_2 == this.OwnerId)
+        if (Input.GetKeyDown(KeyCode.KeypadEnter) && (int)PlayerEnum.PlayerId.PLAYER_2 == this.OwnerId && !this.isInputBlocked)
         {
             this.ManagePlayerPanelInformation();
+            this.isInputBlocked = true;
         }
-
+        else if (Input.GetKeyUp(KeyCode.KeypadEnter) && (int)PlayerEnum.PlayerId.PLAYER_2 == this.OwnerId && this.isInputBlocked)
+        {
+            this.isInputBlocked = false;
+        }
     }
 
     private void ManagePlayerPanelInformation()
     {
+        Text confirmText = this.GetComponentsInChildren<Text>().Last();
         if (this.IsMoving)
         {
             this.IsMoving = false;
             this.IsChoiceMade = true;
+            confirmText.enabled = true;
         }
         else
         {
             this.IsMoving = true;
             this.IsChoiceMade = false;
             this.IsRegistered = false;
+            confirmText.enabled = false;
         }
+        
+        Instantiate(confirmEffect, this.transform.position, Quaternion.identity);
     }
 
     private void UpdateGlobalPositionState(DirectionEnum.Direction direction)
@@ -178,6 +199,7 @@ public class PlayerPanelController : PieceController
     {
         RectTransform panelRectTransform = this.GetComponent<RectTransform>();
         panelRectTransform.anchoredPosition = newPosition;
+        Instantiate(panelMoveEffect, this.transform.position, Quaternion.identity);
     }
 
     private bool IsMoveForbiden(KeyCode keyPushed)
