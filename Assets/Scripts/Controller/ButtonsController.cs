@@ -9,7 +9,7 @@ public class ButtonsController : MonoBehaviour
 {
     public GameObject[] mainMenuButtons;
     public GameObject[] localModeSubMenuButtons;
-    public GameObject[] versusModeSubMenuButtons;
+    private List<GameObject> versusModeSubMenuElements;
     public GameObject versusModeOptionsPanel;
     public GameObject playerSideSelectionPanel;
 
@@ -17,6 +17,8 @@ public class ButtonsController : MonoBehaviour
     {
         this.CurrentMenuId = (int)MenuEnum.MenuId.MAIN_MENU;
         MainMenu = GameObject.FindWithTag(TagConstants.TAG_NAME_MAIN_MENU);
+
+        versusModeSubMenuElements = new List<GameObject>();
 
         if (MainMenu == null)
         {
@@ -37,6 +39,10 @@ public class ButtonsController : MonoBehaviour
 
     public void DisplayVersusModeSubMenu1()
     {
+        if(versusModeSubMenuElements.Count > 0)
+        {
+            versusModeSubMenuElements.Clear();
+        }
 
         ApplicationUtils.playerNumber = 2;
 
@@ -87,7 +93,13 @@ public class ButtonsController : MonoBehaviour
             }
 
             instantiatedPlayerSideSelectionPanelText.text = instantiatedPlayerSideSelectionPanelText.text.Replace("{0}", playerNumberId);
+
+            versusModeSubMenuElements.Add(instantiatedPlayerSideSelectionPanel);
         }
+
+        versusModeSubMenuElements.Add(instantiatedVersusModePanel);
+
+        this.CurrentMenuId = (int)MenuEnum.MenuId.VERSUS_MODE;
 
     }
 
@@ -124,8 +136,16 @@ public class ButtonsController : MonoBehaviour
                 this.ToggleUIelements(false, localModeSubMenuButtons);
                 break;
             case (int)MenuEnum.MenuId.VERSUS_MODE:
-                this.ToggleUIelements(false, versusModeSubMenuButtons);
+                this.DestroyUIelements(versusModeSubMenuElements);
                 break;
+        }
+    }
+
+    private void DestroyUIelements(List<GameObject> elementList)
+    {
+        foreach (GameObject element in elementList)
+        {
+            Destroy(element);
         }
     }
 

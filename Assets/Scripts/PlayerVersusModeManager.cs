@@ -9,6 +9,11 @@ public class PlayerVersusModeManager : MonoBehaviour {
 	// Update is called once per frame
 	void Update () {
 
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            this.ReturnToPreviousMenu();
+        }
+
         PlayerPanelController[] affectationPanels = this.FetchPlayerPanelControllerScripts(false, true);
 
         if (affectationPanels != null)
@@ -68,5 +73,11 @@ public class PlayerVersusModeManager : MonoBehaviour {
             .Where(playerPanelControllerScript => playerPanelControllerScript.IsRegistered == isRegistered && playerPanelControllerScript.IsChoiceMade == isChoiceMade)
             .ToArray(); ;
         return playerPanelControllerScripts;
+    }
+
+    private void ReturnToPreviousMenu()
+    {
+       ButtonsController buttonsControllerScript =  GameUtils.FetchBouttonsControllerScript();
+        buttonsControllerScript.ReturnToLocalModeMenu();
     }
 }

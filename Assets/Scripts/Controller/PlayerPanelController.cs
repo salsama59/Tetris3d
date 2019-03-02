@@ -14,7 +14,10 @@ public class PlayerPanelController : GenericElementController
     private float leftTargetPosition;
     private bool isChoiceMade;
     private bool isRegistered;
-    private bool isInputBlocked;
+    private bool isChoiceInputBlocked;
+    private bool isPositionInputBlocked;
+    private bool isLeftInputPushed;
+    private bool isRigthInputPushed;
 
     public GameObject panelMoveEffect;
     public GameObject confirmEffect;
@@ -34,7 +37,10 @@ public class PlayerPanelController : GenericElementController
         this.IsAtTheLeft = false;
         this.IsAtTheMiddle = true;
         this.IsAtTheRight = false;
-        this.isInputBlocked = false;
+        this.IsChoiceInputBlocked = false;
+        this.IsPositionInputBlocked = false;
+        this.IsLeftInputPushed = false;
+        this.IsRigthInputPushed = false;
         MiddleTargetPosition = 0;
         RightTargetPosition = this.GetRightPositionValue(interfaceRectTransform);
         LeftTargetPosition = this.GetLeftPositionValue(interfaceRectTransform);
@@ -47,41 +53,73 @@ public class PlayerPanelController : GenericElementController
         KeyCode calculatedRightMovementKey = DetectPlayerMovement(DirectionEnum.Direction.RIGHT);
         KeyCode calculatedLeftMovementKey = DetectPlayerMovement(DirectionEnum.Direction.LEFT);
 
-        if (Input.GetKeyUp(calculatedRightMovementKey) && this.IsMoving)
+        if (Input.GetKey(calculatedRightMovementKey) && this.IsMoving && !this.IsPositionInputBlocked)
         {
             if (!this.IsMoveForbiden(calculatedRightMovementKey))
             {
                 this.MoveObjectToNewPosition(this.GetPanelTargetPosition(DirectionEnum.Direction.RIGHT));
-                this.UpdateGlobalPositionState(DirectionEnum.Direction.LEFT);
+                this.UpdateGlobalPositionState();
+                this.IsPositionInputBlocked = true;
+                this.IsRigthInputPushed = true;
             }
         }
-        else if (Input.GetKeyUp(calculatedLeftMovementKey) && this.IsMoving)
+        else if (Input.GetKey(calculatedLeftMovementKey) && this.IsMoving && !this.IsPositionInputBlocked)
         {
             if (!this.IsMoveForbiden(calculatedLeftMovementKey))
             {
                 this.MoveObjectToNewPosition(this.GetPanelTargetPosition(DirectionEnum.Direction.LEFT));
-                this.UpdateGlobalPositionState(DirectionEnum.Direction.LEFT);
+                this.UpdateGlobalPositionState();
+                this.IsPositionInputBlocked = true;
+                this.IsLeftInputPushed = true;
             }
         }
 
-        if (Input.GetKeyDown(KeyCode.Space) && (int)PlayerEnum.PlayerId.PLAYER_1 == this.OwnerId && !this.isInputBlocked)
+        if (!Input.GetKey(calculatedLeftMovementKey) && this.IsLeftInputPushed && this.IsPositionInputBlocked)
         {
-            this.ManagePlayerPanelInformation();
-            this.isInputBlocked = true;
+            this.IsPositionInputBlocked = false;
+            this.IsLeftInputPushed = false;
         }
-        else if(Input.GetKeyUp(KeyCode.Space) && (int)PlayerEnum.PlayerId.PLAYER_1 == this.OwnerId && this.isInputBlocked)
+        else if (!Input.GetKey(calculatedRightMovementKey) && this.IsRigthInputPushed && this.IsPositionInputBlocked)
         {
-            this.isInputBlocked = false;
+            this.IsPositionInputBlocked = false;
+            this.IsRigthInputPushed = false;
         }
 
-        if (Input.GetKeyDown(KeyCode.KeypadEnter) && (int)PlayerEnum.PlayerId.PLAYER_2 == this.OwnerId && !this.isInputBlocked)
+        if ((int)PlayerEnum.PlayerId.PLAYER_1 == this.OwnerId)
+        {
+            this.ManagePlayerConfimChoiceInput(KeyCode.Space);
+        }
+
+        if ((int)PlayerEnum.PlayerId.PLAYER_2 == this.OwnerId)
+        {
+            this.ManagePlayerConfimChoiceInput(KeyCode.KeypadEnter);
+        }
+
+    }
+
+    private void ManagePlayerConfimChoiceInput(KeyCode keyPressed)
+    {
+        if (Input.GetKey(keyPressed) && !this.IsChoiceInputBlocked)
         {
             this.ManagePlayerPanelInformation();
-            this.isInputBlocked = true;
+            this.IsChoiceInputBlocked = true;
         }
-        else if (Input.GetKeyUp(KeyCode.KeypadEnter) && (int)PlayerEnum.PlayerId.PLAYER_2 == this.OwnerId && this.isInputBlocked)
+        else if (!Input.GetKey(keyPressed) && this.IsChoiceInputBlocked)
         {
-            this.isInputBlocked = false;
+            this.IsChoiceInputBlocked = false;
+        }
+    }
+
+    private void ManagePlayerPositionInput(KeyCode keyPressed)
+    {
+        if (Input.GetKey(keyPressed) && !this.IsChoiceInputBlocked)
+        {
+            this.ManagePlayerPanelInformation();
+            this.IsChoiceInputBlocked = true;
+        }
+        else if (!Input.GetKey(keyPressed) && this.IsChoiceInputBlocked)
+        {
+            this.IsChoiceInputBlocked = false;
         }
     }
 
@@ -105,7 +143,7 @@ public class PlayerPanelController : GenericElementController
         Instantiate(confirmEffect, this.transform.position, Quaternion.identity);
     }
 
-    private void UpdateGlobalPositionState(DirectionEnum.Direction direction)
+    private void UpdateGlobalPositionState()
     {
         RectTransform panelRectTransform = this.GetComponent<RectTransform>();
 
@@ -329,6 +367,58 @@ public class PlayerPanelController : GenericElementController
         set
         {
             isRegistered = value;
+        }
+    }
+
+    public bool IsChoiceInputBlocked
+    {
+        get
+        {
+            return isChoiceInputBlocked;
+        }
+
+        set
+        {
+            isChoiceInputBlocked = value;
+        }
+    }
+
+    public bool IsPositionInputBlocked
+    {
+        get
+        {
+            return isPositionInputBlocked;
+        }
+
+        set
+        {
+            isPositionInputBlocked = value;
+        }
+    }
+
+    public bool IsLeftInputPushed
+    {
+        get
+        {
+            return isLeftInputPushed;
+        }
+
+        set
+        {
+            isLeftInputPushed = value;
+        }
+    }
+
+    public bool IsRigthInputPushed
+    {
+        get
+        {
+            return isRigthInputPushed;
+        }
+
+        set
+        {
+            isRigthInputPushed = value;
         }
     }
 }

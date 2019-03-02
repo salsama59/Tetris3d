@@ -24,4 +24,6 @@
     public const string TAG_NAME_CANVAS_GRAPHIC_INTERFACE = "CanvasGraphicInterFace";
     public const string TAG_NAME_PLAYER_AFFECTION_PANEL = "PlayerAffectationPanel";
     public const string TAG_NAME_MAIN_MENU_BUTTON = "MainMenuButton";
+    public const string TAG_NAME_BOUTTONS_CONTROLLER = "ButtonsControler";
+    
 }

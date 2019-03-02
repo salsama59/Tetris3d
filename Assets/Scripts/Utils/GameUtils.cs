@@ -44,4 +44,12 @@ public class GameUtils : MonoBehaviour {
     {
         return FetchGameManagerScript().PlayersPiecesMovementSpeed[playerId];
     }
+
+    public static ButtonsController FetchBouttonsControllerScript()
+    {
+        GameObject buttonsControllerObject = GameObject.FindGameObjectWithTag(TagConstants.TAG_NAME_BOUTTONS_CONTROLLER);
+        ButtonsController buttonsControllerScript = buttonsControllerObject.GetComponent<ButtonsController>();
+
+        return buttonsControllerScript;
+    }
 }
