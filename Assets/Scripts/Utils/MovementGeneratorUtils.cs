@@ -12,7 +12,9 @@ public class MovementGeneratorUtils : MonoBehaviour {
 
     public static void SimulateNextRotation(GameObject currentSimulatedObject, bool isClockwise)
     {
-       
+
+        PieceMetadatas pieceMetadatas = currentSimulatedObject.GetComponent<PieceMetadatas>();
+
         float yAxeRotation = MovementUtils.rotationAmount;
 
         if (!isClockwise)
@@ -20,13 +22,22 @@ public class MovementGeneratorUtils : MonoBehaviour {
             yAxeRotation *= -1;
         }
 
-        //Wanted rotation calculation 
-        Quaternion newrotation = Quaternion.Euler(new Vector3(Quaternion.identity.x, yAxeRotation, Quaternion.identity.z));
-        //The from rotation
-        Quaternion originRotation = currentSimulatedObject.transform.rotation;
-        //The to rotation
-        Quaternion destinationRotation = originRotation * newrotation;
-        currentSimulatedObject.transform.Rotate(destinationRotation.eulerAngles);
-    }
+        yAxeRotation += Mathf.Round(currentSimulatedObject.transform.rotation.eulerAngles.y);
 
+        currentSimulatedObject.transform.rotation = Quaternion.AngleAxis(yAxeRotation, Vector3.up);
+
+        if (pieceMetadatas.HasSpecificRotationBehaviour)
+        {
+            float currentYRotationValue = currentSimulatedObject.transform.rotation.eulerAngles.y;
+
+            if (currentYRotationValue == 90f || currentYRotationValue == 270f)
+            {
+                currentSimulatedObject.transform.position = currentSimulatedObject.transform.position + (Vector3.right / 2);
+            }
+            else
+            {
+                currentSimulatedObject.transform.position = currentSimulatedObject.transform.position + (Vector3.left / 2);
+            }
+        }
+    }
 }

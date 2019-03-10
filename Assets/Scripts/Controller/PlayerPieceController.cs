@@ -50,7 +50,7 @@ public class PlayerPieceController : PieceController {
                 bool isClockwise = true;
                 if (MovementUtils.IsRotationPossible(this.maxRotateAmplitude, this.gameObject))
                 {
-                    RotateObject(isClockwise);
+                    this.RotateObject(isClockwise);
                 }
             }
             else if(Input.GetKeyDown(DetectPlayerRotation(DirectionEnum.Direction.LEFT)))
@@ -123,14 +123,10 @@ public class PlayerPieceController : PieceController {
             yAxeRotation *= -1;
         }
 
-        //Wanted rotation calculation 
-        Quaternion newrotation = Quaternion.Euler(new Vector3(Quaternion.identity.x, yAxeRotation, Quaternion.identity.z));
-        //The from rotation
-        Quaternion originRotation = this.transform.rotation;
-        //The to rotation
-        Quaternion destinationRotation = originRotation * newrotation;
-        //Rotate smoothly
-        this.transform.rotation = Quaternion.Slerp(originRotation, destinationRotation, Mathf.Clamp(Time.time * PieceRotationSpeed, 0f, 1f));
+        yAxeRotation += Mathf.Round(this.transform.rotation.eulerAngles.y);
+
+        //Rotate
+        this.transform.rotation = Quaternion.AngleAxis(yAxeRotation, Vector3.up);
 
         if (pieceMetadatas.HasSpecificRotationBehaviour)
         {
@@ -167,6 +163,4 @@ public class PlayerPieceController : PieceController {
 
         return !MovementUtils.IsMovementPossible(movementDirection, this.gameObject);
     }
-
-
 }

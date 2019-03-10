@@ -3,23 +3,26 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-//Class pour gérer l'intelligence artificielle
+/**
+ * Utility class to help Manage the AI a the game
+ **/
 public class AiUtils : MonoBehaviour {
 
-    //Vérifie pour une pièce donnée si le placement donnera lieu à des trou dans des lignes
-    //FIXME les trous de la piece en elle meme ne sont pas pris en compte dans le calcul, il faut le faire dans un second temps
-    //la liste de position correspond à l'intervale minimum testé qui sera déterminé en fonction de la largeur de la pièce actuelle (pièce parent)
-	public static bool IsLineGapPossible(GameObject pieceParent, List<Vector3> piecePositions, int playerId)
+    /**
+     * Verify if a piece current placement will generate gaps given the piece itself, the current piece player id and the botton pieces positions list
+     * FIXME the piece own gaps are not take into accounts in some cases.
+     **/
+    public static bool IsLineGapPossible(GameObject parentPiece, List<Vector3> bottomPiecesPositions, int playerId)
     {
         
         List<Transform> referencesTransforms = new List<Transform>();
         Dictionary<int, Transform> transformDictionnary = new Dictionary<int, Transform>();
         List<float> distanceList = new List<float>();
 
-        //Récupérer tout les enfants de la pièce triés par hauteur sur z decroissant
-        Transform[] childrenTransform = pieceParent
+        //Gather the current parent piece child sorted by descending z positions
+        Transform[] childrenTransform = parentPiece
             .GetComponentsInChildren<Transform>()
-            .Where(childTransform => childTransform.gameObject != pieceParent)
+            .Where(childTransform => childTransform.gameObject != parentPiece)
             .OrderByDescending(childTransform => childTransform.position.z)
             .ToArray();
 
@@ -36,7 +39,7 @@ public class AiUtils : MonoBehaviour {
                 break;
         }
 
-        //Gouper les enfants par colonnes et ne garder que les enfants dont la hauteur sur z est la moins élevée
+        //Group the child per column and keep those with the less higher z position value
         foreach (Transform transform in referencesTransforms)
         {
             int transformDictionaryKey = 0;
@@ -54,21 +57,21 @@ public class AiUtils : MonoBehaviour {
             
         }
 
-        //Si il n'existe pas de pieces posées alors on simule le sol de l'air de jeu, ainsi les calcul seront fais sur cette base
-        if (piecePositions == null)
+        //If there is no piece at the bottom we try to simulate the game field ground, this way all calcul will be made given this hypothesis 
+        if (bottomPiecesPositions == null)
         {
-            piecePositions = new List<Vector3>();
+            bottomPiecesPositions = new List<Vector3>();
             int[] xPositionIndexes = transformDictionnary.Keys.OrderBy(key => key).ToArray();
 
             foreach (int xPositionIndex in xPositionIndexes)
             {
-                piecePositions.Add(new Vector3(xPositionIndex + 0.5f, 0.5f, -0.5f));
+                bottomPiecesPositions.Add(new Vector3(xPositionIndex + 0.5f, 0.5f, -0.5f));
             }
 
         }
 
-        //Calculer la distances avec la pièce du bas pour chacun des enfants et définir la plus petite des distances
-        foreach (Vector3 position in piecePositions)
+        //Calculate the distance with the pieces on the ground or the ground and the parent piece child
+        foreach (Vector3 position in bottomPiecesPositions)
         {
             int synchro = (int)Mathf.Round(position.x - 0.5f);
            
@@ -80,6 +83,7 @@ public class AiUtils : MonoBehaviour {
 
         }
 
+        //if any of the distances calculated are different from the others this means there will be a gap
         return distanceList.Any(distance => distance != distanceList.First());
 
     }
@@ -162,8 +166,25 @@ public class AiUtils : MonoBehaviour {
         bool isCurrentSimulationInProgress = true;
         while (isCurrentSimulationInProgress)
         {
-            bool possible = IsLineGapPossible(objectClone, GetBottomPiecePositions(playerSide, objectClone), playerSide);
+            bool possible = false;
+            Quaternion startRotation = objectClone.transform.rotation;
 
+            do
+            {
+                Debug.Log(objectClone.transform.rotation.eulerAngles + " != " + startRotation.eulerAngles + " => " + (objectClone.transform.rotation.eulerAngles != startRotation.eulerAngles));
+                possible = IsLineGapPossible(objectClone, GetBottomPiecePositions(playerSide, objectClone), playerSide);
+                if (possible)
+                {
+                    MovementGeneratorUtils.SimulateNextRotation(objectClone, true);
+                }
+                else
+                {
+                    break;
+                }
+                
+            }
+            while (objectClone.transform.rotation.eulerAngles !=startRotation.eulerAngles);
+           
             if (possible)
             {
                 bool isMovePossible = MovementUtils.IsMovementPossible(direction, objectClone);

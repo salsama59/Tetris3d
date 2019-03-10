@@ -28,7 +28,9 @@ public class ButtonsController : MonoBehaviour
 
     public void LaunchOnePlayerMode()
     {
+        string playerType = PlayerTypeConstants.PLAYER_HUMAN;
         ApplicationUtils.playerNumber = 1;
+        ApplicationUtils.AffectPlayer((int)PlayerEnum.PlayerId.PLAYER_1, playerType);
         this.LaunchGame(SceneConstants.SCENE_NAME_ONE_PLAYER_MODE);
     }
 

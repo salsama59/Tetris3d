@@ -281,9 +281,9 @@ public class GameManager : MonoBehaviour {
         if (this.PlayersNextIntantiateRotation[playerId] == null)
         {
             randomInstanciationRotation = Quaternion.Euler(
-            Quaternion.identity.x,
-            Quaternion.identity.y,
-            this.AuthorizedRotations[UnityEngine.Random.Range(0, AuthorizedRotations.Count)]);
+            Vector3.zero.x,
+            this.AuthorizedRotations[UnityEngine.Random.Range(0, AuthorizedRotations.Count)],
+            Vector3.zero.z);
         }
         else
         {
@@ -400,9 +400,9 @@ public class GameManager : MonoBehaviour {
         foreseePiece = gamePiecesPool[(int)this.playersNextObjectIndex[playerId]];
         //Randomly calculate rotation for the next forsee object
         this.PlayersNextIntantiateRotation[playerId] = Quaternion.Euler(
-            Quaternion.identity.x,
-            Quaternion.identity.y,
-            this.AuthorizedRotations[UnityEngine.Random.Range(0, AuthorizedRotations.Count)]);
+            Vector3.zero.x,
+            this.AuthorizedRotations[UnityEngine.Random.Range(0, AuthorizedRotations.Count)],
+            Vector3.zero.z);
         randomInstanciationRotation = (Quaternion)this.PlayersNextIntantiateRotation[playerId];
         //Randomly calculate colors for the next forsee object
         this.PlayersPieceNextColorsList[playerId].Clear();

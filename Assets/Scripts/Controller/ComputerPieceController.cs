@@ -30,8 +30,7 @@ public class ComputerPieceController : PieceController
     // Update is called once per frame
     void FixedUpdate()
     {
-
-        if (IsMoving && this.IsPieceValidForPlay())
+        if (this.IsMoving && this.IsPieceValidForPlay())
         {
 
             this.elapsedTime += Time.deltaTime;
@@ -43,7 +42,7 @@ public class ComputerPieceController : PieceController
                 this.IaData = AiUtils.CalculateAction(this.gameObject, this.OwnerId);
             }
 
-            if (!this.HasPieceReachedTargetPosition())
+            if (!this.HasPieceReachedTargetPosition() && this.HasPieceReachedTargetRotation())
             {
                 this.MoveTowardTargetPosition();
             }
@@ -54,30 +53,13 @@ public class ComputerPieceController : PieceController
 
             newGameObjectVelocity = new Vector3(this.gameObJectRigidBody.velocity.x, this.gameObJectRigidBody.velocity.y, -0.5f * GameUtils.FetchPlayerPieceSpeed(OwnerId));
             
-
             this.gameObJectRigidBody.velocity = newGameObjectVelocity;
 
-
-            /*if (Input.GetKeyDown(DetectPlayerRotation(DirectionEnum.Direction.RIGHT)))
+            if (!this.HasPieceReachedTargetRotation())
             {
-                bool isClockwise = true;
-                if (MovementUtils.IsRotationPossible(this.maxRotateAmplitude, this.gameObject))
-                {
-                    RotateObject(isClockwise);
-                }
+                this.RotateTowardTargetRotation();
             }
-            else if (Input.GetKeyDown(DetectPlayerRotation(DirectionEnum.Direction.LEFT)))
-            {
-                bool isClockwise = false;
-                if (MovementUtils.IsRotationPossible(this.maxRotateAmplitude, this.gameObject))
-                {
-                    this.RotateObject(isClockwise);
-                }
-            }*/
-
-
         }
-
     }
 
     private bool IsPieceValidForPlay()
@@ -99,6 +81,14 @@ public class ComputerPieceController : PieceController
         float targetXposition = this.IaData.TargetPosition.x;
 
         return currentObjectXposition == targetXposition;
+    }
+
+    private bool HasPieceReachedTargetRotation()
+    {
+        float currentObjectYrotation = this.gameObject.transform.rotation.eulerAngles.y;
+        float targetYrotation = this.IaData.TargetRotation.eulerAngles.y;
+
+        return currentObjectYrotation == targetYrotation;
     }
 
     private Vector3 CalculateDirection()
@@ -128,6 +118,46 @@ public class ComputerPieceController : PieceController
         }
     }
 
+    private void RotateTowardTargetRotation()
+    {
+        if (!this.IsRotateForbiden())
+        {
+            this.RotateObject(true);
+        }
+    }
+
+    private void RotateObject(bool isClockwise)
+    {
+        float yAxeRotation = MovementUtils.rotationAmount;
+        PieceMetadatas pieceMetadatas = this.GetComponent<PieceMetadatas>();
+
+        if (!isClockwise)
+        {
+            yAxeRotation *= -1;
+        }
+        
+        yAxeRotation += Mathf.Round(this.transform.rotation.eulerAngles.y);
+
+        /*= Quaternion.Slerp(originRotation, destinationRotation, Mathf.Clamp(Time.time * PieceRotationSpeed, 0f, 1f));*/
+        this.transform.rotation = Quaternion.AngleAxis(yAxeRotation, Vector3.up);
+
+        if (pieceMetadatas.HasSpecificRotationBehaviour)
+        {
+            float currentYRotationValue = this.transform.rotation.eulerAngles.y;
+
+            if (currentYRotationValue == 90f || currentYRotationValue == 270f)
+            {
+                this.transform.position = this.transform.position + (Vector3.right / 2);
+            }
+            else
+            {
+                this.transform.position = this.transform.position + (Vector3.left / 2);
+            }
+        }
+
+        Instantiate(pieceSwingEffect, this.transform.position, Quaternion.identity);
+    }
+
     private void FallDownOnTargetPosition()
     {
         float verticalMove = -1f;
@@ -137,6 +167,11 @@ public class ComputerPieceController : PieceController
         newGameObjectVelocity = new Vector3(gameObJectRigidBody.velocity.x, gameObJectRigidBody.velocity.y, verticalMove * GameUtils.FetchPlayerPieceSpeed(OwnerId));
 
         this.gameObJectRigidBody.velocity = newGameObjectVelocity;
+    }
+
+    private bool IsRotateForbiden()
+    {
+        return !MovementUtils.IsRotationPossible(this.maxRotateAmplitude, this.gameObject);
     }
 
     private bool IsMoveForbiden(Vector3 movementDirection)

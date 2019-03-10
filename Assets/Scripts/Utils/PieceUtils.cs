@@ -39,6 +39,7 @@ public class PieceUtils : MonoBehaviour {
 
     public static GameObject ClonePieceObject(GameObject parentPieceObjectToBeCloned)
     {
+        PieceMetadatas parentPieceObjectToBeClonedMetaDataScript =  FetchPieceMetadataScript(parentPieceObjectToBeCloned);
 
         Transform[] childrenTransform = parentPieceObjectToBeCloned.transform
             .GetComponentsInChildren<Transform>()
@@ -57,6 +58,9 @@ public class PieceUtils : MonoBehaviour {
 
         }
 
+        PieceMetadatas finalParentMetaDatas =  finalParent.AddComponent<PieceMetadatas>();
+        finalParentMetaDatas.IsExcentered = parentPieceObjectToBeClonedMetaDataScript.IsExcentered;
+        finalParentMetaDatas.HasSpecificRotationBehaviour = parentPieceObjectToBeClonedMetaDataScript.HasSpecificRotationBehaviour;
         return finalParent;
     }
 }
