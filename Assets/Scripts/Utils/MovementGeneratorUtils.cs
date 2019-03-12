@@ -23,6 +23,19 @@ public class MovementGeneratorUtils : MonoBehaviour {
         }
 
         yAxeRotation += Mathf.Round(currentSimulatedObject.transform.rotation.eulerAngles.y);
+        float maxRotateAmplitude = 360f;
+
+        if (isClockwise)
+        {
+            maxRotateAmplitude *= -1;
+        }
+
+        yAxeRotation = Mathf.Clamp(yAxeRotation, 0f, maxRotateAmplitude);
+
+        if(yAxeRotation == 360f || yAxeRotation == -360f)
+        {
+            yAxeRotation = 0f;
+        }
 
         currentSimulatedObject.transform.rotation = Quaternion.AngleAxis(yAxeRotation, Vector3.up);
 

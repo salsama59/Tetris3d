@@ -168,23 +168,30 @@ public class AiUtils : MonoBehaviour {
         {
             bool possible = false;
             Quaternion startRotation = objectClone.transform.rotation;
-
+            
             do
             {
-                Debug.Log(objectClone.transform.rotation.eulerAngles + " != " + startRotation.eulerAngles + " => " + (objectClone.transform.rotation.eulerAngles != startRotation.eulerAngles));
-                possible = IsLineGapPossible(objectClone, GetBottomPiecePositions(playerSide, objectClone), playerSide);
-                if (possible)
-                {
-                    MovementGeneratorUtils.SimulateNextRotation(objectClone, true);
-                }
-                else
-                {
-                    break;
-                }
-                
+                 
+                 possible = IsLineGapPossible(objectClone, GetBottomPiecePositions(playerSide, objectClone), playerSide);
+                 if (possible)
+                 {
+                     if (MovementUtils.IsRotationPossible(1.5f, objectClone))
+                     {
+                         MovementGeneratorUtils.SimulateNextRotation(objectClone, true);
+                     }
+                     else
+                     {
+                         break;
+                     }
+
+                 }
+                 else
+                 {
+                     break;
+                 }
             }
-            while (objectClone.transform.rotation.eulerAngles !=startRotation.eulerAngles);
-           
+            while (objectClone.transform.rotation.eulerAngles.y != startRotation.eulerAngles.y);
+
             if (possible)
             {
                 bool isMovePossible = MovementUtils.IsMovementPossible(direction, objectClone);

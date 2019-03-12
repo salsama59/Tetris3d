@@ -226,10 +226,14 @@ public class GameManager : MonoBehaviour {
 
     private void FreezePiece(bool isPieceMoving, bool pieceKinematicState, int playerId)
     {
-        PlayerPieceController pieceMovementScript = this.playersCurrentGamePiece[playerId].GetComponent<PlayerPieceController>();
-        pieceMovementScript.IsMoving = isPieceMoving == false? true : false;
-        Rigidbody currentPieceRigidBody = this.playersCurrentGamePiece[playerId].GetComponent<Rigidbody>();
-        currentPieceRigidBody.isKinematic = pieceKinematicState;
+        GameObject playerPiece = this.playersCurrentGamePiece[playerId];
+        if(playerPiece != null)
+        {
+            PieceController genericParentPieceMovementScript = PieceUtils.FetchCurrentlyActivatedPieceControllerScript(playerPiece);
+            genericParentPieceMovementScript.IsMoving = isPieceMoving == false ? true : false;
+            Rigidbody currentPieceRigidBody = playerPiece.GetComponent<Rigidbody>();
+            currentPieceRigidBody.isKinematic = pieceKinematicState;
+        }
     }
 
     IEnumerator SpawnObjects(int playerId)
