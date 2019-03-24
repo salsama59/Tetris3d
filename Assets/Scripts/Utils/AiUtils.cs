@@ -14,10 +14,19 @@ public class AiUtils : MonoBehaviour {
      **/
     public static bool IsLineGapPossible(GameObject parentPiece, List<Vector3> bottomPiecesPositions, int playerId)
     {
-        
+        List<float> distanceList = CalculateDistanceList(parentPiece, bottomPiecesPositions);
+
+        //if any of the distances calculated are different from the others this means there will be a gap
+        return distanceList.Any(distance => distance != distanceList.First());
+
+    }
+
+    public static List<float> CalculateDistanceList(GameObject parentPiece, List<Vector3> bottomPiecesPositions)
+    {
         List<Transform> referencesTransforms = new List<Transform>();
         Dictionary<int, Transform> transformDictionnary = new Dictionary<int, Transform>();
         List<float> distanceList = new List<float>();
+        List<Vector3> newlyCalculatedBottomPiecesPositions = new List<Vector3>();
 
         //Gather the current parent piece child sorted by descending z positions
         Transform[] childrenTransform = parentPiece
@@ -43,7 +52,7 @@ public class AiUtils : MonoBehaviour {
         foreach (Transform transform in referencesTransforms)
         {
             int transformDictionaryKey = 0;
-     
+
             transformDictionaryKey = (int)Mathf.Round(transform.position.x - 0.5f);
 
             if (transformDictionnary.ContainsKey(transformDictionaryKey))
@@ -54,27 +63,31 @@ public class AiUtils : MonoBehaviour {
             {
                 transformDictionnary.Add(transformDictionaryKey, transform);
             }
-            
+
         }
 
         //If there is no piece at the bottom we try to simulate the game field ground, this way all calcul will be made given this hypothesis 
         if (bottomPiecesPositions == null)
         {
-            bottomPiecesPositions = new List<Vector3>();
+
             int[] xPositionIndexes = transformDictionnary.Keys.OrderBy(key => key).ToArray();
 
             foreach (int xPositionIndex in xPositionIndexes)
             {
-                bottomPiecesPositions.Add(new Vector3(xPositionIndex + 0.5f, 0.5f, -0.5f));
+                newlyCalculatedBottomPiecesPositions.Add(new Vector3(xPositionIndex + 0.5f, 0.5f, -0.5f));
             }
 
         }
+        else
+        {
+            newlyCalculatedBottomPiecesPositions = bottomPiecesPositions;
+        }
 
         //Calculate the distance with the pieces on the ground or the ground and the parent piece child
-        foreach (Vector3 position in bottomPiecesPositions)
+        foreach (Vector3 position in newlyCalculatedBottomPiecesPositions)
         {
             int synchro = (int)Mathf.Round(position.x - 0.5f);
-           
+
             Transform currentChild = transformDictionnary[synchro];
 
             float distance = Mathf.Abs(position.z - currentChild.position.z - 1f);
@@ -83,9 +96,7 @@ public class AiUtils : MonoBehaviour {
 
         }
 
-        //if any of the distances calculated are different from the others this means there will be a gap
-        return distanceList.Any(distance => distance != distanceList.First());
-
+        return distanceList;
     }
 
     public static List<Vector3> GetBottomPiecePositions(int playerId, GameObject parentPiece)
@@ -120,99 +131,6 @@ public class AiUtils : MonoBehaviour {
             return GetPositionListForMultipleChild(playerId, piecePositions, childrenTransform, playerPositionMapElement, playerField, playerForSeeWindow, mapVerticalStartPosition);
         }
         
-    }
-
-    public static IaData CalculateAction(GameObject currentSimulatedObject, int sideId)
-    {
-
-        GameObject simulatedObjectClone = PieceUtils.ClonePieceObject(currentSimulatedObject);
-
-        IaData iaInformations = new IaData();
-
-        Transform transform;
-        //position map elements => [lines, collumns]
-        transform = SimulateMovement(Vector3.right, simulatedObjectClone, sideId);
-
-        if(transform != null)
-        {
-            iaInformations.TargetPosition = transform.position;
-            iaInformations.TargetRotation = transform.rotation;
-            Destroy(simulatedObjectClone);
-            return iaInformations;
-        }
-
-        simulatedObjectClone.transform.SetPositionAndRotation(currentSimulatedObject.transform.position, currentSimulatedObject.transform.rotation);
-
-        transform = SimulateMovement(Vector3.left, simulatedObjectClone, sideId);
-
-        if (transform == null)
-        {
-            iaInformations.TargetPosition = currentSimulatedObject.transform.position;
-            iaInformations.TargetRotation = currentSimulatedObject.transform.rotation;
-        }
-        else
-        {
-            iaInformations.TargetPosition = transform.position;
-            iaInformations.TargetRotation = transform.rotation;
-        }
-
-        Destroy(simulatedObjectClone);
-        return iaInformations;
-    }
-
-    private static Transform SimulateMovement(Vector3 direction, GameObject objectClone, int playerSide)
-    {
-        Transform pieceCloneTransform = null;
-        bool isCurrentSimulationInProgress = true;
-        while (isCurrentSimulationInProgress)
-        {
-            bool possible = false;
-            Quaternion startRotation = objectClone.transform.rotation;
-            
-            do
-            {
-                 
-                 possible = IsLineGapPossible(objectClone, GetBottomPiecePositions(playerSide, objectClone), playerSide);
-                 if (possible)
-                 {
-                     if (MovementUtils.IsRotationPossible(1.5f, objectClone))
-                     {
-                         MovementGeneratorUtils.SimulateNextRotation(objectClone, true);
-                     }
-                     else
-                     {
-                         break;
-                     }
-
-                 }
-                 else
-                 {
-                     break;
-                 }
-            }
-            while (objectClone.transform.rotation.eulerAngles.y != startRotation.eulerAngles.y);
-
-            if (possible)
-            {
-                bool isMovePossible = MovementUtils.IsMovementPossible(direction, objectClone);
-                if (isMovePossible)
-                {
-                    MovementGeneratorUtils.SimulateNextTranslation(objectClone, direction);
-                }
-                else
-                {
-                    return null;
-                }
-                
-            }
-            else
-            {
-                return objectClone.transform;
-            }
-            
-        }
-
-        return pieceCloneTransform;
     }
 
     private static List<Vector3> GetPositionListForMultipleChild(int playerId, List<Vector3> piecePositions, Transform[] childrenTransform, PositionMapElement[,] playerPositionMapElement, GameObject playerField, GameObject playerForSeeWindow, int mapVerticalStartPosition)
@@ -264,15 +182,49 @@ public class AiUtils : MonoBehaviour {
             mapSingleHorizontalPosition = (int)Mathf.Round(childrenTransform.First().position.x - 0.5f);
         }
 
-        for (int j = mapVerticalStartPosition; j > 0; j--)
+        for (int j = mapVerticalStartPosition; j >= 0; j--)
         {
             if (playerPositionMapElement[j, mapSingleHorizontalPosition].IsOccupied)
             {
                 piecePositions.Add(playerPositionMapElement[j, mapSingleHorizontalPosition].CurrentMapElement.transform.position);
                 break;
             }
+
+            if (j == 0)
+            {
+                piecePositions.Add(new Vector3(GameFieldUtils.MapValueToPosition(mapSingleHorizontalPosition, playerId, playerField, playerForSeeWindow), 0.5f, -0.5f));
+            }
         }
+
         return piecePositions;
+    }
+
+    public static float GetHighestDistanceBetweenPieces(int playerId, GameObject parentPiece)
+    {
+        float highestDistance = 0;
+
+        //The two lists are ordered by ascending x position
+        List<Vector3> bottomPiecesPositionList = GetBottomPiecePositions(playerId, parentPiece);
+
+        if (bottomPiecesPositionList == null)
+        {
+            return highestDistance;
+        }
+
+        List<float> distanceList = CalculateDistanceList(parentPiece, bottomPiecesPositionList);
+
+        for (int i = 0; i < distanceList.Count; i++)
+        {
+
+            float distance = distanceList[i];
+
+            if (distance > highestDistance)
+            {
+                highestDistance = distance;
+            }
+        }
+        
+        return highestDistance;
     }
 
 }

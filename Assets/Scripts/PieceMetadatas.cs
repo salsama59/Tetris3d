@@ -8,6 +8,7 @@ public class PieceMetadatas : MonoBehaviour {
     private int? currentPieceLine = null;
     public bool isExcentered;
     public bool hasSpecificRotationBehaviour;
+    public float maxRotateAmplitude;
     private bool isSparkling;
     private bool isPieceReady;
 
@@ -85,6 +86,19 @@ public class PieceMetadatas : MonoBehaviour {
         set
         {
             isPieceReady = value;
+        }
+    }
+
+    public float MaxRotateAmplitude
+    {
+        get
+        {
+            return maxRotateAmplitude;
+        }
+
+        set
+        {
+            maxRotateAmplitude = value;
         }
     }
 }

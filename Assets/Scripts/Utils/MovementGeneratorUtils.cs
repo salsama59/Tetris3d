@@ -14,23 +14,19 @@ public class MovementGeneratorUtils : MonoBehaviour {
     {
 
         PieceMetadatas pieceMetadatas = currentSimulatedObject.GetComponent<PieceMetadatas>();
+        float maxRotationAmount = 360f;
 
         float yAxeRotation = MovementUtils.rotationAmount;
 
         if (!isClockwise)
         {
             yAxeRotation *= -1;
+            maxRotationAmount *= -1;
         }
 
         yAxeRotation += Mathf.Round(currentSimulatedObject.transform.rotation.eulerAngles.y);
-        float maxRotateAmplitude = 360f;
 
-        if (isClockwise)
-        {
-            maxRotateAmplitude *= -1;
-        }
-
-        yAxeRotation = Mathf.Clamp(yAxeRotation, 0f, maxRotateAmplitude);
+        yAxeRotation = Mathf.Clamp(yAxeRotation, 0f, maxRotationAmount);
 
         if(yAxeRotation == 360f || yAxeRotation == -360f)
         {

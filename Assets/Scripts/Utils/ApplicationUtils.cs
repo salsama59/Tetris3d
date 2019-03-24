@@ -2,12 +2,14 @@
 using UnityEngine;
 
 public class ApplicationUtils {
+
     public static int playerNumber = 0;
     public static Dictionary<int, string> playerAffectation = new Dictionary<int, string>();
     public static Dictionary<int, Color> playerPanelColor = new Dictionary<int, Color>(){
             { (int)PlayerEnum.PlayerId.PLAYER_1, new Color(60f/255f, 109f/255f, 37f/255f, 255f/255f) },
             { (int)PlayerEnum.PlayerId.PLAYER_2, new Color(19f/255f, 86f/255f, 120f/255f, 255f/255f) }
         };
+    public static Dictionary<int, string> playerDifficultyMode = new Dictionary<int, string>();
 
     public static bool IsInMultiPlayerMode()
     {
@@ -41,6 +43,23 @@ public class ApplicationUtils {
     public static Color GetPlayerColor(int playerId)
     {
         return playerPanelColor[playerId];
+    }
+
+    public static string GetPlayerDifficultyMode(int playerId)
+    {
+        return playerDifficultyMode[playerId];
+    }
+
+    public static void AffectDifficulty(int playerId, string difficulty)
+    {
+        if (playerDifficultyMode.ContainsKey(playerId))
+        {
+            playerDifficultyMode[playerId] = difficulty;
+        }
+        else
+        {
+            playerDifficultyMode.Add(playerId, difficulty);
+        }
     }
     
 }

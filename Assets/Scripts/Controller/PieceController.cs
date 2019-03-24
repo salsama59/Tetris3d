@@ -8,8 +8,8 @@ public class PieceController : GenericElementController
     protected Rigidbody gameObJectRigidBody;
     protected GameObject field;
     protected float pieceRotationSpeed;
-    public float maxRotateAmplitude;
     public GameObject pieceSwingEffect;
+    private bool isRotationLocked;
 
     public override void Awake()
     {
@@ -42,4 +42,16 @@ public class PieceController : GenericElementController
         }
     }
 
+    protected bool IsRotationLocked
+    {
+        get
+        {
+            return isRotationLocked;
+        }
+
+        set
+        {
+            isRotationLocked = value;
+        }
+    }
 }

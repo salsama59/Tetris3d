@@ -8,7 +8,6 @@ using UnityEngine.UI;
 
 public class GameManager : MonoBehaviour {
 
-    public const float maxAllowedPlayableLine = 19.5f;
     private const float INITIAL_PIECE_SPEED = 8f;
     public GameObject[] gamePiecesPool;
     public float startWait;
@@ -54,8 +53,9 @@ public class GameManager : MonoBehaviour {
 
     private void InitialiseAllGameManagerElements()
     {
-        float angle = 0f;
+        float angle = MovementUtils.rotationMinValue;
 
+        //TODO manage the random rotation on Yand Z axis
         this.AuthorizedRotations = new List<float>();
 
         while (angle <= 180f)
@@ -284,6 +284,7 @@ public class GameManager : MonoBehaviour {
         //Chose the spawn rotation for the object either the last calculated one or a new calculated
         if (this.PlayersNextIntantiateRotation[playerId] == null)
         {
+            //TODO manage the random rotation on the Y and Z axis
             randomInstanciationRotation = Quaternion.Euler(
             Vector3.zero.x,
             this.AuthorizedRotations[UnityEngine.Random.Range(0, AuthorizedRotations.Count)],
@@ -403,6 +404,7 @@ public class GameManager : MonoBehaviour {
         this.playersNextObjectIndex[playerId] = UnityEngine.Random.Range(0, gamePiecesPool.Length);
         foreseePiece = gamePiecesPool[(int)this.playersNextObjectIndex[playerId]];
         //Randomly calculate rotation for the next forsee object
+        //TODO manage the rotation for the Y and Z axis
         this.PlayersNextIntantiateRotation[playerId] = Quaternion.Euler(
             Vector3.zero.x,
             this.AuthorizedRotations[UnityEngine.Random.Range(0, AuthorizedRotations.Count)],
@@ -639,7 +641,7 @@ public class GameManager : MonoBehaviour {
             targetTagName = TagConstants.TAG_NAME_PLAYER_2_PIECE_CHILD;
         }
 
-        for (int i = 0; i < (int)(maxAllowedPlayableLine + 0.5f); i++)
+        for (int i = 0; i < (int)(GameFieldUtils.maxAllowedPlayableLine + 0.5f); i++)
         {
             //Find the game object on the current map line
             GameObject[] listToDestroy = GameObject.FindGameObjectsWithTag(targetTagName)
@@ -790,7 +792,7 @@ public class GameManager : MonoBehaviour {
 
         int currentHighestPieceChildLine = (int)(highestPieceChild.transform.position.z - 0.5f);
 
-        return currentHighestPieceChildLine > maxAllowedPlayableLine;
+        return currentHighestPieceChildLine > GameFieldUtils.maxAllowedPlayableLine;
 
     }
 

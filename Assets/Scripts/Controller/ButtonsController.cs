@@ -97,6 +97,8 @@ public class ButtonsController : MonoBehaviour
             instantiatedPlayerSideSelectionPanelText.text = instantiatedPlayerSideSelectionPanelText.text.Replace("{0}", playerNumberId);
 
             versusModeSubMenuElements.Add(instantiatedPlayerSideSelectionPanel);
+
+            ApplicationUtils.AffectDifficulty(i, DifficultyConstant.NORMAL_MODE);
         }
 
         versusModeSubMenuElements.Add(instantiatedVersusModePanel);

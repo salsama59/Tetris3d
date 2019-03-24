@@ -4,8 +4,8 @@ using UnityEngine;
 
 public class ComputerPieceController : PieceController
 {
-    private Transform targetTransform;
     private IaData iaData;
+    private ComputerPlayerBehaviour computerPlayerBehaviour;
 
     public override void Awake()
     {
@@ -22,7 +22,9 @@ public class ComputerPieceController : PieceController
 
         if (IsPieceValidForPlay())
         {
-            this.IaData = AiUtils.CalculateAction(this.gameObject, this.OwnerId);
+            this.ComputerPlayerBehaviour = PieceUtils.FetchCorrespondingPlayerBehaviourScript(this.gameObject, this.OwnerId);
+            this.ComputerPlayerBehaviour.enabled = true;
+            this.IaData = this.ComputerPlayerBehaviour.CalculateAction(this.gameObject, this.OwnerId);
         }
 
     }
@@ -37,28 +39,27 @@ public class ComputerPieceController : PieceController
 
             Vector3 newGameObjectVelocity = new Vector3();
 
-            if (this.HasNoTarget())
-            {
-                this.IaData = AiUtils.CalculateAction(this.gameObject, this.OwnerId);
-            }
-
-            if (!this.HasPieceReachedTargetPosition() && this.HasPieceReachedTargetRotation())
-            {
-                this.MoveTowardTargetPosition();
-            }
-            else
-            {
-                this.FallDownOnTargetPosition();
-            }
-
-            newGameObjectVelocity = new Vector3(this.gameObJectRigidBody.velocity.x, this.gameObJectRigidBody.velocity.y, -0.5f * GameUtils.FetchPlayerPieceSpeed(OwnerId));
-            
-            this.gameObJectRigidBody.velocity = newGameObjectVelocity;
-
             if (!this.HasPieceReachedTargetRotation())
             {
                 this.RotateTowardTargetRotation();
             }
+
+            if (!this.HasPieceReachedTargetPosition())
+            {
+                this.MoveTowardTargetPosition();
+            }
+
+            if(this.HasPieceReachedTargetPosition() && this.HasPieceReachedTargetRotation())
+            {
+                this.FallDownOnTargetPosition();
+            }
+            else
+            {
+                newGameObjectVelocity = new Vector3(this.gameObJectRigidBody.velocity.x, this.gameObJectRigidBody.velocity.y, -0.5f * GameUtils.FetchPlayerPieceSpeed(OwnerId));
+
+                this.gameObJectRigidBody.velocity = newGameObjectVelocity;
+            }
+
         }
     }
 
@@ -129,14 +130,23 @@ public class ComputerPieceController : PieceController
     private void RotateObject(bool isClockwise)
     {
         float yAxeRotation = MovementUtils.rotationAmount;
+        float maxRotationAmount = MovementUtils.rotationMaxValue;
         PieceMetadatas pieceMetadatas = this.GetComponent<PieceMetadatas>();
 
         if (!isClockwise)
         {
             yAxeRotation *= -1;
+            maxRotationAmount *= -1;
         }
         
         yAxeRotation += Mathf.Round(this.transform.rotation.eulerAngles.y);
+
+        yAxeRotation = Mathf.Clamp(yAxeRotation, MovementUtils.rotationMinValue, maxRotationAmount);
+
+        if (yAxeRotation == 360f || yAxeRotation == -360f)
+        {
+            yAxeRotation = MovementUtils.rotationMinValue;
+        }
 
         /*= Quaternion.Slerp(originRotation, destinationRotation, Mathf.Clamp(Time.time * PieceRotationSpeed, 0f, 1f));*/
         this.transform.rotation = Quaternion.AngleAxis(yAxeRotation, Vector3.up);
@@ -171,26 +181,12 @@ public class ComputerPieceController : PieceController
 
     private bool IsRotateForbiden()
     {
-        return !MovementUtils.IsRotationPossible(this.maxRotateAmplitude, this.gameObject);
+        return !MovementUtils.IsRotationPossible(this.gameObject);
     }
 
     private bool IsMoveForbiden(Vector3 movementDirection)
     {
         return !MovementUtils.IsMovementPossible(movementDirection, this.gameObject);
-    }
-
-
-    public Transform TargetTransform
-    {
-        get
-        {
-            return targetTransform;
-        }
-
-        set
-        {
-            targetTransform = value;
-        }
     }
 
     public IaData IaData
@@ -203,6 +199,19 @@ public class ComputerPieceController : PieceController
         set
         {
             iaData = value;
+        }
+    }
+
+    public ComputerPlayerBehaviour ComputerPlayerBehaviour
+    {
+        get
+        {
+            return computerPlayerBehaviour;
+        }
+
+        set
+        {
+            computerPlayerBehaviour = value;
         }
     }
 }

@@ -35,8 +35,7 @@ public class PieceUtils : MonoBehaviour {
             return monoBehaviourScripts.First() as PieceController;
         }
     }
-        
-
+    
     public static GameObject ClonePieceObject(GameObject parentPieceObjectToBeCloned)
     {
         PieceMetadatas parentPieceObjectToBeClonedMetaDataScript =  FetchPieceMetadataScript(parentPieceObjectToBeCloned);
@@ -61,6 +60,38 @@ public class PieceUtils : MonoBehaviour {
         PieceMetadatas finalParentMetaDatas =  finalParent.AddComponent<PieceMetadatas>();
         finalParentMetaDatas.IsExcentered = parentPieceObjectToBeClonedMetaDataScript.IsExcentered;
         finalParentMetaDatas.HasSpecificRotationBehaviour = parentPieceObjectToBeClonedMetaDataScript.HasSpecificRotationBehaviour;
+        finalParentMetaDatas.MaxRotateAmplitude = parentPieceObjectToBeClonedMetaDataScript.MaxRotateAmplitude;
+
+        finalParent.name = "Simulated => " + parentPieceObjectToBeCloned.name;
         return finalParent;
+    }
+
+    public static EasyModeBehaviour FetchEasyModeBehaviourScript(GameObject parentPiece)
+    {
+        return parentPiece.GetComponent<EasyModeBehaviour>();
+    }
+
+    public static NormalModeBehaviour FetchNormalModeBehaviourScript(GameObject parentPiece)
+    {
+        return parentPiece.GetComponent<NormalModeBehaviour>();
+    }
+
+    public static ComputerPlayerBehaviour FetchCorrespondingPlayerBehaviourScript(GameObject parentPiece, int playerId)
+    {
+        string difficulty = ApplicationUtils.GetPlayerDifficultyMode(playerId);
+
+        if (difficulty == DifficultyConstant.EASY_MODE)
+        {
+            return FetchEasyModeBehaviourScript(parentPiece);
+        }
+        else if (difficulty == DifficultyConstant.NORMAL_MODE)
+        {
+            return FetchNormalModeBehaviourScript(parentPiece);
+        }
+        else
+        {
+            return null;
+        }
+
     }
 }

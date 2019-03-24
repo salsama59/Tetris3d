@@ -4,7 +4,8 @@ using System.Linq;
 
 public class MovementUtils : MonoBehaviour {
 
-    private const float rotationMaxValue = 360f;
+    public const float rotationMaxValue = 360f;
+    public const float rotationMinValue = 0f;
     public const float rotationAmount = 90f;
 
     public static bool IsMovementPossible(Vector3 movementDirection, GameObject objectToMove)
@@ -28,9 +29,10 @@ public class MovementUtils : MonoBehaviour {
         return movementAllowed;
     }
 
-    public static bool IsRotationPossible(float rotationAmplitude, GameObject objectToRotate)
+    public static bool IsRotationPossible(GameObject objectToRotate)
     {
-        List<Vector3> nodes = CalculatePoints(rotationAmplitude, objectToRotate);
+        PieceMetadatas pieceMetadatasScript =  PieceUtils.FetchPieceMetadataScript(objectToRotate);
+        List<Vector3> nodes = CalculatePoints(pieceMetadatasScript.MaxRotateAmplitude, objectToRotate);
         return !SweepHasHit(nodes);
     }
 

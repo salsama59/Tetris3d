@@ -13,7 +13,6 @@ public class PlayerPieceController : PieceController {
         PieceRotationSpeed = 0.4f;
         IsMoving = true;
         this.gameObJectRigidBody = this.gameObject.GetComponent<Rigidbody>();
-       
     }
 
     // Update is called once per frame
@@ -45,21 +44,30 @@ public class PlayerPieceController : PieceController {
                 }
             }
 
-            if (Input.GetKeyDown(DetectPlayerRotation(DirectionEnum.Direction.RIGHT)))
+            if (Input.GetKey(DetectPlayerRotation(DirectionEnum.Direction.RIGHT)) && !this.IsRotationLocked)
             {
                 bool isClockwise = true;
-                if (MovementUtils.IsRotationPossible(this.maxRotateAmplitude, this.gameObject))
+                if (MovementUtils.IsRotationPossible(this.gameObject))
                 {
                     this.RotateObject(isClockwise);
                 }
+
+                this.IsRotationLocked = true;
             }
-            else if(Input.GetKeyDown(DetectPlayerRotation(DirectionEnum.Direction.LEFT)))
+            else if(Input.GetKey(DetectPlayerRotation(DirectionEnum.Direction.LEFT)) && !this.IsRotationLocked)
             {
                 bool isClockwise = false;
-                if (MovementUtils.IsRotationPossible(this.maxRotateAmplitude, this.gameObject))
+                if (MovementUtils.IsRotationPossible(this.gameObject))
                 {
                     this.RotateObject(isClockwise);
                 }
+
+                this.IsRotationLocked = true;
+            }
+
+            if ((Input.GetKeyUp(DetectPlayerRotation(DirectionEnum.Direction.LEFT)) || Input.GetKeyUp(DetectPlayerRotation(DirectionEnum.Direction.RIGHT))) && this.IsRotationLocked)
+            {
+                this.IsRotationLocked = false;
             }
 
             if (Input.GetKey(DetectPlayerMovement(DirectionEnum.Direction.DOWN)))
@@ -116,14 +124,23 @@ public class PlayerPieceController : PieceController {
     private void RotateObject(bool isClockwise)
     {
         float yAxeRotation = MovementUtils.rotationAmount;
+        float maxRotationAmount = MovementUtils.rotationMaxValue;
         PieceMetadatas pieceMetadatas = this.GetComponent<PieceMetadatas>();
 
         if (!isClockwise)
         {
             yAxeRotation *= -1;
+            maxRotationAmount *= -1;
         }
 
         yAxeRotation += Mathf.Round(this.transform.rotation.eulerAngles.y);
+
+        yAxeRotation = Mathf.Clamp(yAxeRotation, MovementUtils.rotationMinValue, maxRotationAmount);
+
+        if (yAxeRotation == 360f || yAxeRotation == -360f)
+        {
+            yAxeRotation = MovementUtils.rotationMinValue;
+        }
 
         //Rotate
         this.transform.rotation = Quaternion.AngleAxis(yAxeRotation, Vector3.up);
