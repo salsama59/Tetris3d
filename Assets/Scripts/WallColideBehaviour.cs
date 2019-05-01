@@ -11,8 +11,8 @@ public class WallColideBehaviour : MonoBehaviour {
         if (isOtherColliderHasPieceChildTag && !pieceMetadatasScript.IsSparkling)
         {
 
-            PieceMovement parentPieceMovementScript = null;
-            parentPieceMovementScript = other.GetComponentInParent<PieceMovement>();
+            PlayerPieceController parentPieceMovementScript = null;
+            parentPieceMovementScript = other.GetComponentInParent<PlayerPieceController>();
 
             if (parentPieceMovementScript == null)
             {
