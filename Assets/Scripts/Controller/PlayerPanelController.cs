@@ -44,6 +44,7 @@ public class PlayerPanelController : GenericElementController
         MiddleTargetPosition = 0;
         RightTargetPosition = this.GetRightPositionValue(interfaceRectTransform);
         LeftTargetPosition = this.GetLeftPositionValue(interfaceRectTransform);
+        this.InitializeDifficultyDropdown();
 
     }
 	
@@ -97,6 +98,33 @@ public class PlayerPanelController : GenericElementController
 
     }
 
+    private void AffectDifficulty(Dropdown currentDropdown)
+    {
+        ApplicationUtils.AffectDifficulty(this.OwnerId, currentDropdown.options[currentDropdown.value].text);
+    }
+
+    private void InitializeDifficultyDropdown()
+    {
+        GameObject dropdownGameObject = GameObject.FindGameObjectsWithTag(TagConstants.TAG_NAME_PLAYER_PANEL_DIFFICULTY_DROPDOWN)
+            .Where(dropdown => dropdown.transform.parent.gameObject == this.gameObject).First();
+        Dropdown dropdownComponent = dropdownGameObject.GetComponent<Dropdown>();
+
+        dropdownComponent.ClearOptions();
+        List<string> optionList = new List<string>
+        {
+            DifficultyConstant.EASY_MODE,
+            DifficultyConstant.NORMAL_MODE
+        };
+        dropdownComponent.AddOptions(optionList);
+
+        dropdownComponent
+            .onValueChanged
+            .AddListener(delegate { this.AffectDifficulty(dropdownComponent); });
+
+        ApplicationUtils.AffectDifficulty(this.OwnerId, optionList.First());
+
+    }
+
     private void ManagePlayerConfimChoiceInput(KeyCode keyPressed)
     {
         if (Input.GetKey(keyPressed) && !this.IsChoiceInputBlocked)
@@ -125,7 +153,10 @@ public class PlayerPanelController : GenericElementController
 
     private void ManagePlayerPanelInformation()
     {
-        Text confirmText = this.GetComponentsInChildren<Text>().Last();
+        Text confirmText = this.GetComponentsInChildren<Text>()
+            .Where(text => text.CompareTag(TagConstants.TAG_NAME_PLAYER_PANEL_CONFIRM_TEXT))
+            .First();
+
         if (this.IsMoving)
         {
             this.IsMoving = false;
@@ -139,7 +170,7 @@ public class PlayerPanelController : GenericElementController
             this.IsRegistered = false;
             confirmText.enabled = false;
         }
-        
+
         Instantiate(confirmEffect, this.transform.position, Quaternion.identity);
     }
 
@@ -159,6 +190,11 @@ public class PlayerPanelController : GenericElementController
         {
             this.UpdatePositionStates(false, false, true);
         }
+
+        GameObject dropdownGameObject = GameObject.FindGameObjectsWithTag(TagConstants.TAG_NAME_PLAYER_PANEL_DIFFICULTY_DROPDOWN)
+            .Where(dropdown => dropdown.transform.parent.gameObject == this.gameObject).First();
+        Dropdown dropdownComponent = dropdownGameObject.GetComponent<Dropdown>();
+        dropdownComponent.interactable = this.IsAtTheMiddle;
     }
 
     private void UpdatePositionStates(bool isAtTheMiddle, bool isAtTheRight, bool isAtThLeft)

@@ -88,6 +88,11 @@ public class AiUtils : MonoBehaviour {
         {
             int synchro = (int)Mathf.Round(position.x - 0.5f);
 
+            if (!transformDictionnary.ContainsKey(synchro))
+            {
+                Debug.Log("Did not find key : " + synchro);
+            }
+
             Transform currentChild = transformDictionnary[synchro];
 
             float distance = Mathf.Abs(position.z - currentChild.position.z - 1f);

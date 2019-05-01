@@ -25,6 +25,13 @@ public class NormalModeBehaviour : ComputerPlayerBehaviour
 
         simulatedObjectClone.transform.SetPositionAndRotation(currentSimulatedObject.transform.position, currentSimulatedObject.transform.rotation);
 
+        bool isMovePossible = MovementUtils.IsMovementPossible(Vector3.left, simulatedObjectClone);
+
+        if (isMovePossible)
+        {
+            MovementGeneratorUtils.SimulateNextTranslation(simulatedObjectClone, Vector3.left);
+        }
+
         this.SimulateMovement(Vector3.left, simulatedObjectClone, sideId);
 
         if(ValidPositionCriteriaList.Count != 0)
@@ -51,95 +58,44 @@ public class NormalModeBehaviour : ComputerPlayerBehaviour
     {
 
         Transform pieceCloneTransform = null;
-        bool isCurrentSimulationInProgress = true;
-        while (isCurrentSimulationInProgress)
+        Quaternion startRotation = objectClone.transform.rotation;
+        Vector3 startPosition = objectClone.transform.position;
+
+        do
         {
-            bool possible = false;
-            Quaternion startRotation = objectClone.transform.rotation;
-
-            do
+            while (true)
             {
+                bool isGapPossible = AiUtils.IsLineGapPossible(objectClone, AiUtils.GetBottomPiecePositions(playerSide, objectClone), playerSide);
 
-                possible = AiUtils.IsLineGapPossible(objectClone, AiUtils.GetBottomPiecePositions(playerSide, objectClone), playerSide);
-                if (possible)
+                if (!isGapPossible)
                 {
-                    if (MovementUtils.IsRotationPossible(objectClone))
-                    {
-                        MovementGeneratorUtils.SimulateNextRotation(objectClone, true);
-                    }
-                    else
-                    {
-                        break;
-                    }
+                    this.UpdateValidPositionCriteriaList(objectClone, playerSide);
+                }
 
+                if (!MovementUtils.IsMovementPossible(direction, objectClone))
+                {
+                    break;
                 }
                 else
                 {
-                    this.UpdateValidPositionCriteriaList(objectClone, playerSide);
-
-                    if (MovementUtils.IsRotationPossible(objectClone))
-                    {
-                        MovementGeneratorUtils.SimulateNextRotation(objectClone, true);
-                    }
-                    else
-                    {
-                        break;
-                    }
+                    MovementGeneratorUtils.SimulateNextTranslation(objectClone, direction);
                 }
             }
-            while (objectClone.transform.rotation.eulerAngles.y != startRotation.eulerAngles.y);
 
-            bool isMovePossible = MovementUtils.IsMovementPossible(direction, objectClone);
-            if (isMovePossible)
+            objectClone.transform.SetPositionAndRotation(startPosition, objectClone.transform.rotation);
+
+            if (MovementUtils.IsRotationPossible(objectClone))
             {
-                MovementGeneratorUtils.SimulateNextTranslation(objectClone, direction);
+                MovementGeneratorUtils.SimulateNextRotation(objectClone, true);
+                startPosition = objectClone.transform.position;
             }
             else
             {
-
-                startRotation = objectClone.transform.rotation;
-                bool isSkipTranslationBack = false;
-
-                do
-                {
-                    if (!isSkipTranslationBack)
-                    {
-                        //Go in the opposite direction once
-                        MovementGeneratorUtils.SimulateNextTranslation(objectClone, direction * -1);
-                    }
-                    
-                    //Rotate piece
-                    MovementGeneratorUtils.SimulateNextRotation(objectClone, true);
-
-                    //Verify if movement to former position is possible
-                    isMovePossible = MovementUtils.IsMovementPossible(direction, objectClone);
-                    if (isMovePossible)
-                    {
-                        //Move to former position
-                        MovementGeneratorUtils.SimulateNextTranslation(objectClone, direction);
-                        //Veify if gap possible
-                        possible = AiUtils.IsLineGapPossible(objectClone, AiUtils.GetBottomPiecePositions(playerSide, objectClone), playerSide);
-
-                        if (!possible)
-                        {
-                            //Save the valid position and rotation
-                            this.UpdateValidPositionCriteriaList(objectClone, playerSide);
-                        }
-
-                        isSkipTranslationBack = false;
-
-                    }
-                    else
-                    {
-                        isSkipTranslationBack = true;
-                    }
-                }
-                while (objectClone.transform.rotation.eulerAngles.y != startRotation.eulerAngles.y);
-
-                return null;
+                break;
             }
 
         }
+        while (objectClone.transform.rotation.eulerAngles.y != startRotation.eulerAngles.y);
 
         return pieceCloneTransform;
     }

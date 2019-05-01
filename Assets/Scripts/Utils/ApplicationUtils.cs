@@ -61,5 +61,10 @@ public class ApplicationUtils {
             playerDifficultyMode.Add(playerId, difficulty);
         }
     }
-    
+
+    public static void ClearDifficultyAffectation()
+    {
+        playerDifficultyMode.Clear();
+    }
+
 }

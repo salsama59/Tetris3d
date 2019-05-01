@@ -4,6 +4,9 @@ using UnityEngine;
 
 public class GameUtils : MonoBehaviour {
 
+    public static int LINE_DIMENSION = 0;
+    public static int COLLUMN_DIMENSION = 1;
+
     public static GameObject FetchGraphicInterface()
     {
         return GameObject.FindGameObjectWithTag(TagConstants.TAG_NAME_CANVAS_GRAPHIC_INTERFACE);
@@ -52,4 +55,15 @@ public class GameUtils : MonoBehaviour {
 
         return buttonsControllerScript;
     }
+
+    public static int FetchPlayerPositionMapMaxLineIndex(int playerId)
+    {
+        return FetchGameManagerScript().PlayersPositionMap[playerId].GetLength(LINE_DIMENSION);
+    }
+
+    public static int FetchPlayerPositionMapMaxCollumnIndex(int playerId)
+    {
+        return FetchGameManagerScript().PlayersPositionMap[playerId].GetLength(COLLUMN_DIMENSION);
+    }
+
 }

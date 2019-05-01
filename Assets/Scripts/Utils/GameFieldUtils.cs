@@ -7,19 +7,31 @@ public class GameFieldUtils : MonoBehaviour {
 
     public static float FIELD_MARGIN = 2f;
     public static float maxAllowedPlayableLine = 19.5f;
+    public static float HALF_UNIT = 0.5f;
 
     public static int PositionToMapValue(float position, int playerId, GameObject fieldGameObject, GameObject fieldForeSeeWindowGameObject)
     {
         int collumn = 0;
+        float gameElementsHorizontalRange = 0f;
+        //Avoid bug on calculation during cast
+        float intermediateCollumnCalculation = 0f;
+
+        Vector3 gameFieldBackgroundMaxRange = ElementType.CalculateGameObjectMaxRange(fieldGameObject.transform.GetChild(0).gameObject);
+        Vector3 gameFieldForeSeeWindowBackgroundMaxRange = ElementType.CalculateGameObjectMaxRange(fieldForeSeeWindowGameObject.transform.GetChild(0).gameObject);
+
         if (playerId == (int)PlayerEnum.PlayerId.PLAYER_1)
         {
-            collumn = (int)((ElementType.CalculateGameObjectMaxRange(fieldGameObject.transform.GetChild(0).gameObject).x + FIELD_MARGIN - 0.5f) - (position * -1));
+            gameElementsHorizontalRange = gameFieldBackgroundMaxRange.x + FIELD_MARGIN - HALF_UNIT;
+            intermediateCollumnCalculation = gameElementsHorizontalRange + position;
+            collumn = (int)(intermediateCollumnCalculation);
         }
         else if (playerId == (int)PlayerEnum.PlayerId.PLAYER_2)
         {
-            collumn = (int)(position - (ElementType.CalculateGameObjectMaxRange(fieldForeSeeWindowGameObject.transform.GetChild(0).gameObject).x + FIELD_MARGIN + 0.5f));
+            gameElementsHorizontalRange = gameFieldForeSeeWindowBackgroundMaxRange.x + FIELD_MARGIN + HALF_UNIT;
+            intermediateCollumnCalculation = position - gameElementsHorizontalRange;
+            collumn = (int)(intermediateCollumnCalculation);
         }
-        
+
         return collumn;
     }
 

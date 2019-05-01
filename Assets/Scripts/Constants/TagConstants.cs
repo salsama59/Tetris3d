@@ -25,5 +25,8 @@
     public const string TAG_NAME_PLAYER_AFFECTION_PANEL = "PlayerAffectationPanel";
     public const string TAG_NAME_MAIN_MENU_BUTTON = "MainMenuButton";
     public const string TAG_NAME_BOUTTONS_CONTROLLER = "ButtonsControler";
+    public const string TAG_NAME_PLAYER_PANEL_CONFIRM_TEXT = "PlayerPanelConfirmText";
+    public const string TAG_NAME_PLAYER_PANEL_DIFFICULTY_DROPDOWN = "PlayerPanelDifficultyDropdown";
     
+
 }

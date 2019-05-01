@@ -41,7 +41,9 @@ public class ButtonsController : MonoBehaviour
 
     public void DisplayVersusModeSubMenu1()
     {
-        if(versusModeSubMenuElements.Count > 0)
+        ApplicationUtils.ClearDifficultyAffectation();
+
+        if (versusModeSubMenuElements.Count > 0)
         {
             versusModeSubMenuElements.Clear();
         }
@@ -98,7 +100,7 @@ public class ButtonsController : MonoBehaviour
 
             versusModeSubMenuElements.Add(instantiatedPlayerSideSelectionPanel);
 
-            ApplicationUtils.AffectDifficulty(i, DifficultyConstant.NORMAL_MODE);
+            
         }
 
         versusModeSubMenuElements.Add(instantiatedVersusModePanel);

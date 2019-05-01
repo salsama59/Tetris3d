@@ -10,21 +10,20 @@ public class MovementUtils : MonoBehaviour {
 
     public static bool IsMovementPossible(Vector3 movementDirection, GameObject objectToMove)
     {
-        List<bool> rayCastHits = new List<bool>();
-        float spherePositionAdjustment = movementDirection.x * 0.5f;
+        List<bool> boxHits = new List<bool>();
+        float boxPositionAdjustment = movementDirection.x * 0.75f;
 
         Transform[] childrenTransform = objectToMove.GetComponentsInChildren<Transform>();
 
         foreach (Transform childTransform in childrenTransform)
         {
-            RaycastHit infos;
-            Vector3 sphereOrigin = new Vector3(childTransform.position.x - spherePositionAdjustment, childTransform.position.y, childTransform.position.z);
-            bool hasHitten = Physics.SphereCast(sphereOrigin, 0.5f, movementDirection, out infos, 1f, LayerMask.GetMask(LayerConstants.LAYER_NAME_DESTROYABLE_PIECE, LayerConstants.LAYER_NAME_ARENA_WALL));
-            rayCastHits.Add(hasHitten);
+            Vector3 boxOrigin = new Vector3(childTransform.position.x + boxPositionAdjustment, childTransform.position.y, childTransform.position.z);
+            bool hasBoxHitten = Physics.CheckBox(boxOrigin, Vector3.one * 0.5f, childTransform.rotation, LayerMask.GetMask(LayerConstants.LAYER_NAME_DESTROYABLE_PIECE, LayerConstants.LAYER_NAME_ARENA_WALL));
+            boxHits.Add(hasBoxHitten);
         }
 
-        //Check if all raycast hit are false (return true if all hit are false but return false otherwise) 
-        bool movementAllowed = rayCastHits.ToArray().All(hit => hit == false);
+        //Check if all box hit are false (return true if all hit are false but return false otherwise) 
+        bool movementAllowed = boxHits.ToArray().All(hit => hit == false);
 
         return movementAllowed;
     }
@@ -34,6 +33,14 @@ public class MovementUtils : MonoBehaviour {
         PieceMetadatas pieceMetadatasScript =  PieceUtils.FetchPieceMetadataScript(objectToRotate);
         List<Vector3> nodes = CalculatePoints(pieceMetadatasScript.MaxRotateAmplitude, objectToRotate);
         return !SweepHasHit(nodes);
+    }
+
+    private static void DrawLines(List<Vector3> nodes)
+    {
+        for (int i = 0; i < nodes.Count - 1; i++)
+        {
+            Debug.DrawLine(nodes[i], nodes[i + 1], Color.red, 10f);
+        }
     }
 
     private static  List<Vector3> CalculatePoints(float maxRotateAmplitude, GameObject objectToRotate)
