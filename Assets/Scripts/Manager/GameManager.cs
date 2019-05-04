@@ -1071,4 +1071,17 @@ public class GameManager : MonoBehaviour {
             playersForeSeeWindow = value;
         }
     }
+
+    public Dictionary<int, bool> PlayersDeletingLinesState
+    {
+        get
+        {
+            return playersDeletingLinesState;
+        }
+
+        set
+        {
+            playersDeletingLinesState = value;
+        }
+    }
 }
