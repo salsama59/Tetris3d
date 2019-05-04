@@ -66,4 +66,9 @@ public class GameUtils : MonoBehaviour {
         return FetchGameManagerScript().PlayersPositionMap[playerId].GetLength(COLLUMN_DIMENSION);
     }
 
+    public static bool FetchPlayersDeletingLinesState(int playerId)
+    {
+        return FetchGameManagerScript().PlayersDeletingLinesState[playerId];
+    }
+
 }

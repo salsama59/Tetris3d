@@ -15,25 +15,23 @@ public class ComputerPieceController : PieceController
     // Use this for initialization
     void Start()
     {
-        
         this.PieceRotationSpeed = 0.4f;
         this.IsMoving = true;
         this.gameObJectRigidBody = this.gameObject.GetComponent<Rigidbody>();
-
-        if (IsPieceValidForPlay())
-        {
-            this.ComputerPlayerBehaviour = PieceUtils.FetchCorrespondingPlayerBehaviourScript(this.gameObject, this.OwnerId);
-            this.ComputerPlayerBehaviour.enabled = true;
-            this.IaData = this.ComputerPlayerBehaviour.CalculateAction(this.gameObject, this.OwnerId);
-        }
-
+        this.ComputerPlayerBehaviour = PieceUtils.FetchCorrespondingPlayerBehaviourScript(this.gameObject, this.OwnerId);
+        this.ComputerPlayerBehaviour.enabled = true;
     }
 
     // Update is called once per frame
     void FixedUpdate()
     {
-        if (this.IsMoving && this.IsPieceValidForPlay())
+        if (this.IsPieceValidForPlay())
         {
+
+            if (this.HasNoTarget())
+            {
+                this.IaData = this.ComputerPlayerBehaviour.CalculateAction(this.gameObject, this.OwnerId);
+            }
 
             this.elapsedTime += Time.deltaTime;
 
@@ -68,7 +66,8 @@ public class ComputerPieceController : PieceController
         PieceMetadatas pieceMetadataScript =  this.gameObject.GetComponent<PieceMetadatas>();
         bool isNotForseeObject = !this.gameObject.CompareTag(TagConstants.TAG_NAME_PLAYER_1_FORESEE_PIECE) || !this.gameObject.CompareTag(TagConstants.TAG_NAME_PLAYER_2_FORESEE_PIECE);
         bool isPiecePlayable = pieceMetadataScript.IsPieceReady;
-        return isNotForseeObject && isPiecePlayable;
+        bool isInDeletingState = GameUtils.FetchPlayersDeletingLinesState(this.OwnerId);
+        return isNotForseeObject && isPiecePlayable && this.IsMoving && !this.gameObJectRigidBody.isKinematic && !isInDeletingState;
     }
 
     private bool HasNoTarget()
